@@ -1,18 +1,25 @@
-import math
+import math, csv
 import goTree
 import gene_ontology as go
 
 class MicroArray:
-	def __init__(self, matrix, genesId, conditions):
-		self.matrix = matrix
-		self.conditions = conditions
+	def __init__(self, fileObj, **kwargs):
+		'fileObj - a filename or file object referencing to the microarray csv file'
+		if isinstance(fileObj, str):
+			self.fileObj = open(fileObj, "rb")
+		elif isinstance(fileObj, file):
+			self.fileObj = fileObj
+		else:
+			raise Exception('input to Microarray is not of type string or file')
 		
-		self.numGenes = len(genesId)
+		self.matrix, self.genesId = self.fileReader(self.fileObj, **kwargs)
+		
+		self.numGenes = len(self.genesId)
 		self.numCols = len(self.matrix[0])
 		
 		self.genes = {}
 		for i in xrange(self.numGenes):
-			self.genes[genesId[i]] = Gene(genesId[i], matrix[i])
+			self.genes[self.genesId[i]] = self.matrix[i]
 		
 	def geneProfile(self, geneId):
 		if geneId in self.genes:
@@ -20,6 +27,61 @@ class MicroArray:
 		else:
 			return None
 	
+	def fileReader(self, fileObj, idCol = 1, ignoreRows = [1], ignoreCols = [2]):
+		'''
+			values of idCol, ignoreRows, and ignoreCols begin from 1 (instead of 0).... so 1 is the first column
+		'''
+		
+		if isinstance(ignoreRows, int):
+			ignoreRows = [ignoreRows]
+		if isinstance(ignoreCols, int):
+			ignoreCols = [ignoreCols]
+		
+		ignoreCols = set(ignoreCols)
+		ignoreRows = set(ignoreRows)
+		
+		
+		reader = csv.reader(fileObj)
+		
+		matrix = []
+		ids = []
+		for i,row in enumerate(reader):
+			lineNum = i+1
+			
+			if lineNum in ignoreRows:
+				continue
+			
+			if row[idCol - 1] == "":
+				continue
+			
+			values = []
+			tempId = ''
+			for j, cell in enumerate(row):
+				colNum = j + 1
+				
+				if colNum in ignoreCols:
+					continue
+				
+				if colNum == idCol:
+					tempId = cell
+				else:
+					if cell == '':
+						cell = '0'
+					values.append(int(cell))
+			
+			#Checking if the variance of the gene expression profile is zero, if it is so, then it is left out
+			if self.variance(values) == 0:
+				continue
+			
+			ids.append(tempId)
+			matrix.append(values)
+			
+		fileObj.close()
+		return matrix, ids
+		
+	def variance(self, values):
+		mean = sum(values)/float(len(values))
+		return sum( pow((mean-i), 2) for i in values)/float(len(values))
 	
 	
 		
@@ -28,6 +90,8 @@ class Gene:
 		'profile refers to the row of values related to the gene in the microarray	'
 		self.id = id
 		self.profile = profile
+		if not isinstance(profile, list):
+			print profile
 	
 class GoTerm():
 	"This class takes care of t-test for a Go Tree node"
@@ -44,7 +108,11 @@ class GoTerm():
 		
 		self.numGenes = len(self.genes)
 		
-		self.ic = -1 * math.log(float(self.numGenes)/totalGenes)	# Information content
+		try:
+			self.ic = -1 * math.log(float(self.numGenes)/totalGenes)	# Information content
+		except:
+			print float(self.numGenes), totalGenes
+			raise Exception
 		
 		if self.numGenes:
 			self.numCols = len(self.genes[0].profile)
@@ -58,6 +126,12 @@ class GoTerm():
 		#Take care of the t-test here
 		
 	def correlation(self):
+		if self.numGenes == 1:
+			self.correlationList = [1.0]
+			self.meanCorrelation = 1.0
+			return [[1]]
+			
+			
 		correlationMatrix = [[0 for _ in xrange(self.numGenes)] for _ in xrange(self.numGenes)]
 		
 		meanArray = []
@@ -72,6 +146,17 @@ class GoTerm():
 			for j in xrange(i):	
 				numerator = sum( (self.matrix[i][k] - meanArray[i]) * (self.matrix[j][k] - meanArray[j]) for k in xrange(self.numCols))
 				denominator = (sum( pow((self.matrix[i][k] - meanArray[i]), 2) for k in xrange(self.numCols)) * sum( pow((self.matrix[j][k] - meanArray[j]), 2) for k in xrange(self.numCols)) ) ** 0.5
+				
+				if denominator == 0:
+					print sum( pow((self.matrix[i][k] - meanArray[i]), 2) for k in xrange(self.numCols))
+					print sum( pow((self.matrix[j][k] - meanArray[j]), 2) for k in xrange(self.numCols))
+					print i, j
+					print self.matrix[i]
+					print self.matrix[j]
+					print meanArray[i]
+					print meanArray[j]
+					
+				
 				correlationMatrix[i][j] = correlationMatrix[j][i] = numerator / denominator
 				
 				correlationList.append(numerator/denominator)
@@ -110,9 +195,13 @@ class GoTree:
 			modGenes = []
 			genes = list(geneSet)
 			for gene in genes:
-				geneProfile = microArray.geneProfile(gene)
+				geneProfile = microarray.geneProfile(gene)
 				if geneProfile is not None:
 					modGenes.append(Gene(gene, geneProfile))
+			
+			if len(modGenes) == 0:
+				#Probably no data found in the microarray for the corresponding set of genes
+				continue
 			
 			self.terms[goId] = GoTerm(tempTerm, modGenes, self.totalGenes)
 		
@@ -167,7 +256,7 @@ class GoTree:
 		
 		ancestors = []
 		for i in xrange(lenTerms):
-			ancestors.append(self.tree.ancestors(terms[i])
+			ancestors.append(self.tree.ancestors(terms[i]))
 			
 		for i in xrange(lenTerms):
 			for j in xrange(i+1):
@@ -273,11 +362,9 @@ class GoTree:
 if __name__ == "__main__":
 	import sys, time
 	
+	microarray = MicroArray('data/Birnbaum.csv')
 	
-	
-	GoTree(
-	
-	temp = GoTree()
+	temp = GoTree('data/gene_ontology.obo', 'data/gene_association.tair', microarray)
 	print sys.argv
 	t = time.time()
 	print temp.pCalculator(float(sys.argv[1]), int(sys.argv[2]))

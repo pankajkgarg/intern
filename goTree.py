@@ -4,7 +4,7 @@ from collections import defaultdict
 
 def annotations(fileObj, evidenceCodes = []):
 	'''
-	Takes only 3 things from the annotation file, db_object_id and go_id, while evidence_code are used for filtering
+	Takes only 3 things from the annotation file, db_object_id and go_id, while evidence_code are used for filterDataing
 	Returns a dict mapping go_id to a set of db_object_id
 	
 	fileObj - file containing annotations, can be filename, or file object
@@ -13,20 +13,20 @@ def annotations(fileObj, evidenceCodes = []):
 	
 	ann = go.AnnotationFile(fileObj)
 	
+	
 	if len(evidenceCodes) == 0:
-		filter = False
+		filterData = False
 	else:
-		filter = True
+		filterData = True
 		evidenceCodes = set(evidenceCodes)
 		
 	associations = defaultdict(set)	# Maps go_id to a set of genes id
 	for temp in ann:
-		#Filtering based on evidence codes
-		if filter  and temp.evidence_code not in evidenceCodes:
+		#filterDataing based on evidence codes
+		if filterData  and temp.evidence_code not in evidenceCodes:
 			continue
 		
-		associations[temp.go_id].add(temp.db_object_id)
-	ann.close()
+		associations[temp.go_id].add(temp.db_object_symbol)		#IMPORTANT: change to db_object_id
 	
 	return associations
 		
