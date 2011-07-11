@@ -1,0 +1,117 @@
+<html>
+  <head>
+    <title>Scatterplot</title>
+    <link type="text/css" rel="stylesheet" href="ex.css?3.2"/>
+    <script type="text/javascript" src="protovis-3.2/protovis-r3.2.js"></script>
+    
+    <script type="text/javascript">
+    	var data = pv.range(100).map(function(x) {
+    	return {x: x, y: Math.random(), z: Math.pow(10, 2 * Math.random())};
+  		});
+    </script>
+    
+    <style type="text/css">
+
+body {
+  margin: 0;
+  display: table;
+  height: 100%;
+  width: 100%;
+  font: 14px/134% Helvetica Neue, sans-serif;
+}
+
+#center {
+  display: table-cell;
+  vertical-align: middle;
+}
+
+#fig {
+  position: relative;
+  margin: auto;
+}
+
+
+#fig {
+  width: 430px;
+  height: 425px;
+}
+
+    </style>
+  </head>
+  <body><div id="center"><div id="fig">
+    <script type="text/javascript+protovis">
+
+/* Sizing and scales. */
+var w = 800,
+    h = 500,
+    kx = 100,
+    ky = 1,
+    x = pv.Scale.linear(-kx, kx).range(0, w),
+    y = pv.Scale.linear(-ky, ky).range(0, h),
+    c = pv.Scale.log(1, 100).range("orange", "brown");
+
+/* The root panel. */
+var vis = new pv.Panel()
+    .width(w)
+    .height(h)
+    .bottom(20)
+    .left(20)
+    .right(10)
+    .top(5);
+
+/* X-axis and ticks. */
+vis.add(pv.Rule)
+    .data(function() x.ticks())
+    .strokeStyle(function(d) d ? "#ccc" : "#999")
+    .left(x)
+  .anchor("bottom").add(pv.Label)
+    .text(x.tickFormat);
+
+/* Y-axis and ticks. */
+vis.add(pv.Rule)
+    .data(function() y.ticks())
+    .strokeStyle(function(d) d ? "#ccc" : "#999")
+    .top(y)
+  .anchor("left").add(pv.Label)
+    .text(y.tickFormat);
+
+
+/* The dot plot. */
+vis.add(pv.Panel)
+    .overflow("hidden")
+  .add(pv.Dot)
+    .data(data)
+    .left(function(d) x(d.x))
+    .top(function(d) y(d.y))
+    .fillStyle(pv.rgb(121, 173, 210, .5))
+    //.radius(function(d) d.z / this.scale)
+    .strokeStyle(function(d) c(d.z))
+    .fillStyle(function() this.strokeStyle().alpha(.2))
+    //.size(function(d)  this.scale)
+  .anchor("bottom").add(pv.Label)
+  	.text(function(d) (d.z > this.scale * 10) ? d.z : "");   // Displays the label (d.z) only if d.z is greater than 50
+
+    ;
+    
+/* Use an invisible panel to capture pan & zoom events. */
+vis.add(pv.Panel)
+    .events("all")
+    .event("mousedown", pv.Behavior.pan())
+    .event("mousewheel", pv.Behavior.zoom())
+    .event("pan", transform)
+    .event("zoom", transform);
+
+/** Update the x- and y-scale domains per the new transform. */
+function transform() {
+  var t = this.transform().invert();
+  x.domain(t.x / w * 2 * kx - kx, (t.k + t.x / w) * 2 * kx - kx);
+  y.domain(t.y / h * 2 * ky - ky, (t.k + t.y / h) * 2 * ky - ky);
+  vis.render();
+}
+    
+
+vis.render();
+
+    </script>
+  </div></div></body>
+</html>
