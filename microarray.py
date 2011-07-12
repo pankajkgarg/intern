@@ -149,7 +149,9 @@ class GoTerm():
 				denominator = self.genes[i].varianceLike * self.genes[j].varianceLike 
 				
 				correlation = numerator/denominator
-				modCorrelation  = -1 * correlation if correlation < 0 else correlation
+				modCorrelation  = math.fabs(correlation)
+				
+				#iMPORTANT: substitute append by something else, because appends are slow
 				correlationList.append(modCorrelation)
 				
 		self.meanCorrelation = float(sum(correlationList))/len(correlationList)
@@ -168,7 +170,7 @@ class GoTree:
 		microarray - An instance of MicroArray class
 		'''
 		
-		self.significanceLevel = 0.01
+		self.significanceLevel = 0.05
 		
 		self.ontologyFile = ontologyFile
 		self.annotationFile = annotationFile
@@ -199,11 +201,9 @@ class GoTree:
 				continue
 			
 			tempTerm = GoTerm(tempTerm, modGenes, self.totalGenes)
-			if tempTerm.meanCorrelation < 0.5:
-				continue
-			else:
-				self.terms[goId] = tempTerm
+			self.terms[goId] = tempTerm
 		
+		print 'No. of terms before filtering:', len(self.terms)
 		#Terms after filtering
 		modTerms = self.filtering()
 		print 'Number of terms after filtering: ', len(modTerms)
@@ -232,7 +232,12 @@ class GoTree:
 	def filtering(self):
 		modTerms = set()
 		for goId, term in self.terms.iteritems():
-			parents = term.tags['is_a']
+			try:
+				parents = term.tags['is_a']
+			except:
+				print term.tags
+				raise Exception
+				
 			for parentId in parents:
 				if parentId in self.terms:
 					tValue = self.tTest(term.correlationList, self.terms[parentId].correlationList)
@@ -245,8 +250,9 @@ class GoTree:
 					#Using one tailed pValue
 					pValue = self.pCalculator(modT, len(term.correlationList) + len(self.terms[parentId].correlationList) - 2)
 					
-					if pValue < significanceLevel and tValue > 0:
+					if pValue < self.significanceLevel and tValue > 0:
 						modTerms.add(term)
+					
 					
 		return modTerms
 						
