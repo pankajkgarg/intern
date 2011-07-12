@@ -1,4 +1,4 @@
-import math, csv
+import math, csv, array, operator
 import goTree
 import gene_ontology as go
 
@@ -12,16 +12,15 @@ class MicroArray:
 		else:
 			raise Exception('input to Microarray is not of type string or file')
 		
-		self.matrix, self.genesId = self.fileReader(self.fileObj, **kwargs)
+		self.genes = self.fileReader(self.fileObj, **kwargs)
+		self.numGenes = len(self.genes)
 		
-		self.numGenes = len(self.genesId)
-		self.numCols = len(self.matrix[0])
+		uidCount = 1
+		for geneId in self.genes.iterkeys():
+			self.genes[geneId].uid = uidCount
+			uidCount += 1
 		
-		self.genes = {}
-		for i in xrange(self.numGenes):
-			self.genes[self.genesId[i]] = self.matrix[i]
-		
-	def geneProfile(self, geneId):
+	def gene(self, geneId):
 		if geneId in self.genes:
 			return self.genes[geneId]
 		else:
@@ -43,8 +42,7 @@ class MicroArray:
 		
 		reader = csv.reader(fileObj)
 		
-		matrix = []
-		ids = []
+		genes = {}
 		for i,row in enumerate(reader):
 			lineNum = i+1
 			
@@ -73,11 +71,10 @@ class MicroArray:
 			if self.variance(values) == 0:
 				continue
 			
-			ids.append(tempId)
-			matrix.append(values)
-			
+			genes[tempId] = Gene(tempId, values)
+						
 		fileObj.close()
-		return matrix, ids
+		return genes
 		
 	def variance(self, values):
 		mean = sum(values)/float(len(values))
@@ -89,9 +86,17 @@ class Gene:
 	def __init__(self, id, profile):
 		'profile refers to the row of values related to the gene in the microarray	'
 		self.id = id
-		self.profile = profile
+		self.profile = array.array('f', profile)
 		if not isinstance(profile, list):
 			print profile
+			raise Exception(" gene profile is not a list")
+		
+		self.numCols = len(self.profile)
+		self.mean = sum(self.profile)/float(len(self.profile))
+		self.meanDiff = array.array('f', [self.profile[k] - self.mean for k in xrange(self.numCols)])
+		self.varianceLike = pow( sum( pow((self.profile[k] - self.mean), 2) for k in xrange(self.numCols)), 0.5)
+
+correlations = {}
 	
 class GoTerm():
 	"This class takes care of t-test for a Go Tree node"
@@ -118,53 +123,61 @@ class GoTerm():
 			self.numCols = len(self.genes[0].profile)
 		else:
 			self.numCols = 0
-			
-		self.matrix = [tempGene.profile for tempGene in genes]
 		
-		self.correlationMatrix = self.correlation()	
+		self.correlation()	
 		
 		#Take care of the t-test here
 		
 	def correlation(self):
+		global correlations 
+		
 		if self.numGenes == 1:
 			self.correlationList = [1.0]
 			self.meanCorrelation = 1.0
-			return [[1]]
+			return
+			#return [[1]]
 			
 			
-		correlationMatrix = [[0 for _ in xrange(self.numGenes)] for _ in xrange(self.numGenes)]
-		
-		meanArray = []
-		for i in xrange(self.numGenes):
-			meanArray.append(sum(self.matrix[i])/ float(len(self.matrix[i])))
+		#correlationMatrix = [[0 for _ in xrange(self.numGenes)] for _ in xrange(self.numGenes)]
 			
 		
-		correlationList = []
+		correlationList = array.array('f')
 		
 		for i in xrange(self.numGenes):			
-			correlationMatrix[i][i] = 1.0
-			for j in xrange(i):	
-				numerator = sum( (self.matrix[i][k] - meanArray[i]) * (self.matrix[j][k] - meanArray[j]) for k in xrange(self.numCols))
-				denominator = (sum( pow((self.matrix[i][k] - meanArray[i]), 2) for k in xrange(self.numCols)) * sum( pow((self.matrix[j][k] - meanArray[j]), 2) for k in xrange(self.numCols)) ) ** 0.5
-				
-				if denominator == 0:
-					print sum( pow((self.matrix[i][k] - meanArray[i]), 2) for k in xrange(self.numCols))
-					print sum( pow((self.matrix[j][k] - meanArray[j]), 2) for k in xrange(self.numCols))
-					print i, j
-					print self.matrix[i]
-					print self.matrix[j]
-					print meanArray[i]
-					print meanArray[j]
-					
-				
-				correlationMatrix[i][j] = correlationMatrix[j][i] = numerator / denominator
-				
-				correlationList.append(numerator/denominator)
+			#correlationMatrix[i][i] = 1.0
 			
-		self.correlationList = correlationList
+			if i%100 == 0:
+				print i, '\tTotal: ', self.numGenes, '\tTotal correaltions: ', len(correlations)
+			
+			for j in xrange(i):	
+				#using uid instead of gene id so as to save RAM
+				key = (self.genes[i].uid, self.genes[j].uid)	
+				reverseKey = (self.genes[j].uid, self.genes[i].uid)
+				
+				if key not in correlations and reverseKey not in correlations:
+					numerator = sum(map(operator.mul, self.genes[i].meanDiff, self.genes[j].meanDiff ))
+					denominator = self.genes[i].varianceLike * self.genes[j].varianceLike 
+					correlations[key] = numerator/denominator
+				
+				if key not in correlations:
+					key = reverseKey	
+				
+				
+				#correlationMatrix[i][j] = correlationMatrix[j][i] = correlations[key]
+				correlationList.append(correlations[key])
+				
+				#correlationMatrix[i][j] = correlationMatrix[j][i] = numerator / denominator
+				
+				#correlationList.append(numerator/denominator)
+		
 		self.meanCorrelation = float(sum(correlationList))/len(correlationList)
-		return correlationMatrix
-	
+		if self.meanCorrelation < 0.5:
+			self.correlationList = None
+			del(correlationList)
+			print 'discarding with genes ', self.numGenes
+		else:	
+			self.correlationList = correlationList
+		
 class GoTree:
 	def __init__(self, 
 			ontologyFile,  
@@ -188,22 +201,31 @@ class GoTree:
 		self.associations = goTree.annotations(self.annotationFile, evidenceCodes)
 		self.tree = go.Tree.from_obo(ontologyFile)
 		
+		numProcessed = 0
 		self.terms = {}
 		for goId, geneSet in self.associations.iteritems():
+			numProcessed += 1
+			if numProcessed % 100 == 0:
+				print 'Num processed: ', numProcessed
+			
 			tempTerm = self.tree.ensure_term(goId)
 			
 			modGenes = []
 			genes = list(geneSet)
-			for gene in genes:
-				geneProfile = microarray.geneProfile(gene)
-				if geneProfile is not None:
-					modGenes.append(Gene(gene, geneProfile))
+			for geneId in genes:
+				tempGene = microarray.gene(geneId)
+				if tempGene is not None:
+					modGenes.append(tempGene)
 			
 			if len(modGenes) == 0:
 				#Probably no data found in the microarray for the corresponding set of genes
 				continue
 			
-			self.terms[goId] = GoTerm(tempTerm, modGenes, self.totalGenes)
+			tempTerm = GoTerm(tempTerm, modGenes, self.totalGenes)
+			if tempTerm.meanCorrelation < 0.5:
+				continue
+			else:
+				self.terms[goId] = tempTerm
 		
 		#Terms after filtering
 		modTerms = self.filtering()
