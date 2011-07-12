@@ -96,7 +96,7 @@ class Gene:
 		self.meanDiff = array.array('f', [self.profile[k] - self.mean for k in xrange(self.numCols)])
 		self.varianceLike = pow( sum( pow((self.profile[k] - self.mean), 2) for k in xrange(self.numCols)), 0.5)
 
-correlations = {}
+
 	
 class GoTerm():
 	"This class takes care of t-test for a Go Tree node"
@@ -124,22 +124,17 @@ class GoTerm():
 		else:
 			self.numCols = 0
 		
-		self.correlation()	
+		self.computeCorrelation()	
 		
 		#Take care of the t-test here
 		
-	def correlation(self):
-		global correlations 
+	def computeCorrelation(self):
 		
 		if self.numGenes == 1:
 			self.correlationList = [1.0]
 			self.meanCorrelation = 1.0
 			return
 			#return [[1]]
-			
-			
-		#correlationMatrix = [[0 for _ in xrange(self.numGenes)] for _ in xrange(self.numGenes)]
-			
 		
 		correlationList = array.array('f')
 		
@@ -147,36 +142,18 @@ class GoTerm():
 			#correlationMatrix[i][i] = 1.0
 			
 			if i%100 == 0:
-				print i, '\tTotal: ', self.numGenes, '\tTotal correaltions: ', len(correlations)
+				print i, '\tTotal: ', self.numGenes
 			
 			for j in xrange(i):	
-				#using uid instead of gene id so as to save RAM
-				key = (self.genes[i].uid, self.genes[j].uid)	
-				reverseKey = (self.genes[j].uid, self.genes[i].uid)
+				numerator = sum(map(operator.mul, self.genes[i].meanDiff, self.genes[j].meanDiff ))
+				denominator = self.genes[i].varianceLike * self.genes[j].varianceLike 
 				
-				if key not in correlations and reverseKey not in correlations:
-					numerator = sum(map(operator.mul, self.genes[i].meanDiff, self.genes[j].meanDiff ))
-					denominator = self.genes[i].varianceLike * self.genes[j].varianceLike 
-					correlations[key] = numerator/denominator
+				correlation = numerator/denominator
+				modCorrelation  = -1 * correlation if correlation < 0 else correlation
+				correlationList.append(modCorrelation)
 				
-				if key not in correlations:
-					key = reverseKey	
-				
-				
-				#correlationMatrix[i][j] = correlationMatrix[j][i] = correlations[key]
-				correlationList.append(correlations[key])
-				
-				#correlationMatrix[i][j] = correlationMatrix[j][i] = numerator / denominator
-				
-				#correlationList.append(numerator/denominator)
-		
 		self.meanCorrelation = float(sum(correlationList))/len(correlationList)
-		if self.meanCorrelation < 0.5:
-			self.correlationList = None
-			del(correlationList)
-			print 'discarding with genes ', self.numGenes
-		else:	
-			self.correlationList = correlationList
+		self.correlationList = correlationList
 		
 class GoTree:
 	def __init__(self, 
@@ -229,6 +206,8 @@ class GoTree:
 		
 		#Terms after filtering
 		modTerms = self.filtering()
+		print 'Number of terms after filtering: ', len(modTerms)
+		
 		simMatrix = self.resnick(modTerms)
 		
 		#Converting into dissimilarity matrix
