@@ -136,8 +136,9 @@ class GoTerm():
 			return
 			#return [[1]]
 		
-		correlationList = array.array('f')
+		correlationList = array.array('f', [0] * int(((self.numGenes * self.numGenes) - self.numGenes)/2) )
 		
+		k = 0
 		for i in xrange(self.numGenes):			
 			#correlationMatrix[i][i] = 1.0
 			
@@ -152,8 +153,9 @@ class GoTerm():
 				modCorrelation  = math.fabs(correlation)
 				
 				#iMPORTANT: substitute append by something else, because appends are slow
-				correlationList.append(modCorrelation)
-				
+				correlationList[k] = (modCorrelation)
+				k += 1
+		
 		self.meanCorrelation = float(sum(correlationList))/len(correlationList)
 		self.correlationList = correlationList
 		
@@ -196,7 +198,7 @@ class GoTree:
 				if tempGene is not None:
 					modGenes.append(tempGene)
 			
-			if len(modGenes) == 0:
+			if len(modGenes) < 3:
 				#Probably no data found in the microarray for the corresponding set of genes
 				continue
 			
@@ -236,9 +238,11 @@ class GoTree:
 				parents = term.tags['is_a']
 			except:
 				print term.tags
-				raise Exception
+				print "\n\n"
+				continue
 				
-			for parentId in parents:
+			for parent in parents:
+				parentId = parent.value
 				if parentId in self.terms:
 					tValue = self.tTest(term.correlationList, self.terms[parentId].correlationList)
 					
@@ -250,8 +254,14 @@ class GoTree:
 					#Using one tailed pValue
 					pValue = self.pCalculator(modT, len(term.correlationList) + len(self.terms[parentId].correlationList) - 2)
 					
+					print tValue, pValue
+					if math.isnan(pValue):
+						pValue = 0.001
+					
 					if pValue < self.significanceLevel and tValue > 0:
 						modTerms.add(term)
+					else:
+						print pValue
 					
 					
 		return modTerms
@@ -260,6 +270,8 @@ class GoTree:
 		'Terms - List of filtered go terms ( Instance of GoTerm )'
 		lenTerms = len(terms)
 		simMatrix = [[0 for _ in xrange(lenTerms)] for _ in xrange(lenTerms)]
+		
+		terms = list(terms)
 		
 		ancestors = []
 		for i in xrange(lenTerms):
@@ -291,7 +303,16 @@ class GoTree:
 		variance2 = sum( pow((mean2 - i), 2) for i in series2) / float(num2)
 		denominator = pow( (pow(variance1, 2)/num1) + (pow(variance2, 2)/num2), 0.5)
 		
-		return (numerator/denominator)
+		try:
+			result = (numerator/denominator)
+		except:
+			print variance1
+			print series1
+			print variance2
+			print series2
+			
+			
+		return result
 			
 		
 	memoize = {}
@@ -328,7 +349,7 @@ class GoTree:
 		'''
 		#Integration through Simpson rule
 		initialX = tValue
-		finalX = tValue + 20.0
+		finalX = tValue + 10.0
 		numIntervals = 500
 		h = (finalX - initialX)/float(numIntervals)
 		
@@ -364,7 +385,7 @@ class GoTree:
 			
 			# i += interval
 			
-		# return (pValue * 2)
+		# return pValue
 		
 if __name__ == "__main__":
 	import sys, time
