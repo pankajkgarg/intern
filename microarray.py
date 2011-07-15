@@ -1,5 +1,6 @@
-import math, csv, array, operator
+import math, csv, array, operator, json, os
 import goTree
+import mds
 import gene_ontology as go
 
 class MicroArray:
@@ -102,9 +103,12 @@ class GoTerm():
 	"This class takes care of t-test for a Go Tree node"
 	
 	def __init__(self, termObj, genes, totalGenes):
-		'termObj - instance of go.Term'
-		'genes - A list or set of instances of Gene'
-		'totalGenes - total no. of genes in the annotation file (to calcuate the Information content)'
+		''''
+		termObj - instance of go.Term
+		genes - A list or set of instances of Gene
+		totalGenes - total no. of genes in the annotation file 
+			(to calcuate the Information content)
+		'''
 		self.id = termObj.id
 		self.name = termObj.name
 		self.tags = termObj.tags
@@ -113,10 +117,11 @@ class GoTerm():
 		
 		self.numGenes = len(self.genes)
 		
+		# Information content
 		try:
-			self.ic = -1 * math.log(float(self.numGenes)/totalGenes)	# Information content
+			self.ic = -1 * math.log(float(self.numGenes)/totalGenes)	
 		except:
-			print float(self.numGenes), totalGenes
+			print 'Trouble with information content', float(self.numGenes), totalGenes
 			raise Exception
 		
 		if self.numGenes:
@@ -126,7 +131,6 @@ class GoTerm():
 		
 		self.computeCorrelation()	
 		
-		#Take care of the t-test here
 		
 	def computeCorrelation(self):
 		
@@ -142,8 +146,8 @@ class GoTerm():
 		for i in xrange(self.numGenes):			
 			#correlationMatrix[i][i] = 1.0
 			
-			if i%100 == 0:
-				print i, '\tTotal: ', self.numGenes
+			#if i%100 == 0:
+			#	print i, '\tTotal: ', self.numGenes
 			
 			for j in xrange(i):	
 				numerator = sum(map(operator.mul, self.genes[i].meanDiff, self.genes[j].meanDiff ))
@@ -152,8 +156,7 @@ class GoTerm():
 				correlation = numerator/denominator
 				modCorrelation  = math.fabs(correlation)
 				
-				#iMPORTANT: substitute append by something else, because appends are slow
-				correlationList[k] = (modCorrelation)
+				correlationList[k] = modCorrelation
 				k += 1
 		
 		self.meanCorrelation = float(sum(correlationList))/len(correlationList)
@@ -213,22 +216,48 @@ class GoTree:
 		simMatrix = self.resnick(modTerms)
 		
 		#Converting into dissimilarity matrix
-		tempList = []
-		[tempList.extend(i) for i in simMatrix]
-		maxValue = float(max(tempList))
-		disMatrix = [[0 for _ in xrange(len(modTerms))] for _ in xrange(len(modTerms))]
-		for i in xrange(len(modTerms)):
-			for j in xrange(i):
-				disMatrix[i][j] = disMatrix[j][i] = 1 - (simMatrix[i][j]/maxValue)
-		
+		disMatrix = self.sim2dis(simMatrix)
 		
 		#Doing mds
-		mds = MDS(disMatrix)
-		mds.process()
+		mdsInstance = mds.MDS(disMatrix)
+		coordinates = mdsInstance.process()
+		
+		self.save(modTerms, coordinates)
 		
 		#self.terms = {}
 		#for term in modTerms:
 		#	self.terms[term.id] = term
+	
+	def sim2dis(self, matrix):
+		"Given a similarity matrix, converts it to dissimilarity matrix"
+		size = len(matrix)
+		disMatrix = [[0 for _ in xrange(size)] for _ in xrange(size)]
+		
+		tempList = []
+		map(tempList.extend, matrix)
+		maxValue = float(max(tempList))
+		
+		for i in xrange(size):
+			for j in xrange(i):
+				disMatrix[i][j] = disMatrix[j][i] = 1 - (matrix[i][j]/maxValue)
+		return disMatrix
+		
+		
+	def save(self, terms, coordinates):
+		data = []
+		for i,term in enumerate(terms):	
+			data.append({
+				"i": i,
+				"x": coordinates[i][0],
+				"y": coordinates[i][1],
+				"label": term.name,
+				"score": term.meanCorrelation,
+			})
+		
+		f = open( os.path.join('results', 'jsonOutput.js') , "wb")
+		text = "var data = " + json.dumps(data)
+		f.write(text)
+		f.close()
 		
 	
 	def filtering(self):
@@ -255,23 +284,29 @@ class GoTree:
 					pValue = self.pCalculator(modT, len(term.correlationList) + len(self.terms[parentId].correlationList) - 2)
 					
 					print tValue, pValue
+					
 					if math.isnan(pValue):
+						#TODO: WHY is this happening.. why am I getting nan values
 						pValue = 0.001
 					
 					if pValue < self.significanceLevel and tValue > 0:
 						modTerms.add(term)
 					else:
-						print pValue
+						print 'Not selected: ',pValue
 					
-					
+		modTerms = list(modTerms)		
 		return modTerms
 						
 	def resnick(self, terms):
 		'Terms - List of filtered go terms ( Instance of GoTerm )'
+		
+		#Ensure that the terms is a list, and not a set
+		#	This is necessary, so that later labels doesn't mix up
+		if not isinstance(terms, (list, tuple)):
+			raise Exception("given parameter is not a list")
+		
 		lenTerms = len(terms)
 		simMatrix = [[0 for _ in xrange(lenTerms)] for _ in xrange(lenTerms)]
-		
-		terms = list(terms)
 		
 		ancestors = []
 		for i in xrange(lenTerms):
@@ -284,8 +319,16 @@ class GoTree:
 				for term in common:
 					scores.append( len(self.associations[term.id]) ) 
 				
-				score = min(scores) # minimum because, lesser the number of genes, higher the Information Content
-				simMatri[i][j] = simMatrix[j][i] = -1 * math.log(float(score)/self.totalGenes)
+				if len(scores) != 0:
+					score = min(scores) # minimum because, lesser the number of genes, higher the Information Content
+				else:
+					score = 0
+					
+				if score == 0:
+					#TODO: Analyze this situation, how come the minimum score is 0
+					simMatrix[i][j] = simMatrix[j][i] = 0
+				else:
+					simMatrix[i][j] = simMatrix[j][i] = -1 * math.log(float(score)/self.totalGenes)
 				
 		return simMatrix
 		
@@ -393,11 +436,7 @@ if __name__ == "__main__":
 	microarray = MicroArray('data/Birnbaum.csv')
 	
 	temp = GoTree('data/gene_ontology.obo', 'data/gene_association.tair', microarray)
-	print sys.argv
-	t = time.time()
-	print temp.pCalculator(float(sys.argv[1]), int(sys.argv[2]))
-	print time.time() - t
-		
+	
 			
 		
 		

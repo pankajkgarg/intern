@@ -3,7 +3,7 @@
 
 import random, time, os, operator, array
 from pprint import pprint
-import matplotlib.pyplot as plt
+
 
 
 class MDS:
@@ -20,14 +20,15 @@ class MDS:
 		self.numDims = numDims
 		
 	def initialization(self):
-		'Returns a matrix of dimension -> N(number of elements) * M(number of dimensions)'
-		maxLenGraph = self.numPoints 	#The maximum length of the graph is decided as the square root of the number of points in the distance matrix
-		
-		def maxLenFunc(i):
-			if i == 0:
-				return maxLenGraph
-			else:
-				return maxLenGraph
+		'''
+		Initialize the distance matrix. The matrix is random, 
+			except that the closest pairs are kept close.
+		Returns a matrix of dimension 
+			-> N(number of elements) * M(number of dimensions)
+		'''
+		#The maximum length of the graph is decided as the 
+		#	square root of the number of points in the distance matrix
+		maxCoord = self.numPoints 	
 		
 		
 		#Finding closest pairs
@@ -43,12 +44,12 @@ class MDS:
 			matrix.append(array.array('f'))
 			for j in xrange(self.numDims):
 				if self.closestPairs[i] < i :
-					matrix[i].append(matrix[self.closestPairs[i]][j] + (random.random() * maxLenFunc(j) * 0.3 * random.choice([-1, 1])) )
+					matrix[i].append(matrix[self.closestPairs[i]][j] + (random.random() * maxCoord * 0.1 * random.choice([-1, 1])) )
 				else:
-					matrix[i].append( (random.random() * maxLenFunc(j) ) )
+					matrix[i].append( (random.random() * maxCoord ) )
 		
 		return matrix			
-		#return [ [(random.random() *  maxLenFunc(i)) for i in xrange(self.numDims)] for _ in xrange(self.numPoints)]
+		#return [ [(random.random() *  maxCoord) for i in xrange(self.numDims)] for _ in xrange(self.numPoints)]
 		
 	def updateDistanceMatrix(self):
 		'Shall update the distanceMatrix based on X(vector matrix)'
@@ -108,25 +109,29 @@ class MDS:
 		#print 'after multiplication';		pprint (self.X)
 		self.X = [ [(nInverse * self.X[i][j]) for j in xrange(self.numDims)] for i in xrange(self.numPoints)]
 		
-	def process(self):
+	def process(self, plot = False):
+		#Retruns a n*2 matrix
+		
 		self.X = self.initialization()
 
-		
-		
 		#Plotting the graph
 #Assuming the data is 2-Dimensional
-		plt.ion()
+		if plot:
+			import matplotlib.pyplot as plt
+			plt.ion()
 		
 		self.iteration()
 		xData = [i[0] for i in self.X]
 		yData = [i[1] for i in self.X]
-		p, = plt.plot(xData, yData, 'o')
+		
+		if plot:
+			p, = plt.plot(xData, yData, 'o')
 		
 		stress, oldStress = 0, 0
 		for j in xrange(1000):	#Putting maximum 1000 iterations
 			self.iteration()
 
-			if j%20 == 0 and j!= 0:
+			if plot and j%20 == 0 and j!= 0:
 				xData = [i[0] for i in self.X]
 				yData = [i[1]  for i in self.X]
 				p.set_xdata(xData)
@@ -155,9 +160,11 @@ class MDS:
 		f.write(coordString)
 		f.close()
 			
-		plt.ioff()
-		plt.show()
+		if plot:
+			plt.ioff()
+			plt.show()
 		
+		return self.X
 
 	
 def test():
