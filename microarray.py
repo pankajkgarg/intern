@@ -275,7 +275,7 @@ class GoTree:
 		
 		ancestors = []
 		for i in xrange(lenTerms):
-			ancestors.append(self.tree.ancestors(terms[i]))
+			ancestors.append(self.tree.ancestors(terms[i].id))
 			
 		for i in xrange(lenTerms):
 			for j in xrange(i+1):
