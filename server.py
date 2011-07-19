@@ -7,6 +7,7 @@ import goTree
 from jinja2 import Environment, PackageLoader
 from microarray import MicroArray
 import re, Queue, threading, string, random, os
+from pprint import pprint
 
 #render = web.template.render('templates/')
 env = Environment(loader=PackageLoader('__main__', 'templates'))
@@ -64,13 +65,17 @@ def process(jobQueue):
 	
 		if 'idCol' in kwargs:
 			kwargs['idCol'] = int(kwargs['idCol'])
+			
+		if 'evidenceCodes' in kwargs:
+			if kwargs['evidenceCodes'] == 'all':
+				kwargs['evidenceCodes'] = []
 		
 		microarray = MicroArray(kwargs['microarrayFile'], idCol = kwargs['idCol'], ignoreRows = kwargs['ignoreRows'], ignoreCols = kwargs['ignoreCols'] )
 	
 		#Shall do the processing and shall save the results in 'results' directory 
 		#	with the filename  "kwargs['name']" + ".js"
 
-		temp = goTree.GoTree(kwargs['ontologyFile'], kwargs['annotationFile'], microarray, name = kwargs['id'], evidenceCodes = kwargs['evidenceCodes'])
+		temp = goTree.GoTree(kwargs['ontologyFile'], kwargs['annotationFile'], microarray, name = kwargs['jobId'], evidenceCodes = kwargs['evidenceCodes'])
 	
 		if kwargs["email"] is not None:
 			email(**kwargs)
@@ -92,7 +97,7 @@ class home:
 			return env.get_template("home.html").render(form = formText, )
 		else:
 			dataDict = dict(f.value)
-			dataDict["id"] = randomId()
+			dataDict["jobId"] = randomId()
 			
 			ontologyPath = os.path.join("data", "ontologyFile.obo")
 			f = open(ontologyPath, "wb")
@@ -106,7 +111,7 @@ class home:
 			f.close()
 			dataDict["annotationFile"] = annotationPath
 			
-			microarrayPath = os.path.join("data", dataDict["id"] + "_microarray.csv")
+			microarrayPath = os.path.join("data", dataDict["jobId"] + "_microarray.csv")
 			f = open(microarrayPath, "wb")
 			f.write(dataDict["microarrayFile"])
 			f.close()
@@ -151,6 +156,8 @@ Your very own gocharts server ;)"
 	
 	
 if __name__ == "__main__":
+
+
 	#app.run()
 	jobQueue = Queue.Queue()
 	import __builtin__

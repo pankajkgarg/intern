@@ -1,13 +1,14 @@
 import math, csv, array, operator, json, os
 import gene_ontology as go
 import mds
+from utils import *
 from microarray import MicroArray
 from gzip import GzipFile
 from collections import defaultdict
 
-if __name__ != "__main__":
-	import sys
-	sys.stdout = open("data/debug.txt", "ab")
+#if __name__ != "__main__":
+#	import sys
+#	sys.stdout = open("data/debug.txt", "ab")
 
 def annotations(fileObj, evidenceCodes = []):
 	'''
@@ -15,7 +16,7 @@ def annotations(fileObj, evidenceCodes = []):
 	Returns a dict mapping go_id to a set of db_object_id
 	
 	fileObj - file containing annotations, can be filename, or file object
-	evidenceCodes - the evidence codes to select, if the list is left empty, then all are allowed
+	evidenceCodes - the evidence codes to select, IF the list is left empty, then all are allowed
 	'''
 	
 	ann = go.AnnotationFile(fileObj)
@@ -70,7 +71,13 @@ class GoTerm():
 		else:
 			self.numCols = 0
 		
-		self.computeCorrelation()	
+		if "is_a" in self.tags:
+			#Only compute the correlation for non root nodes
+			# Since, they are anyway left out
+			self.computeCorrelation()	
+		else:
+			self.meanCorrelation = 0.0
+			self.correlationList = None
 		
 		
 	def computeCorrelation(self):
@@ -149,7 +156,8 @@ class GoTree:
 					modGenes.append(tempGene)
 			
 			if len(modGenes) < 3:
-				#Probably no data found in the microarray for the corresponding set of genes
+				#Probably no data found in the microarray for the 
+				#	corresponding set of genes
 				continue
 			
 			tempTerm = GoTerm(tempTerm, modGenes, self.totalGenes)
@@ -157,8 +165,10 @@ class GoTree:
 		
 		print 'No. of terms before filtering:', len(self.terms)
 		#Terms after filtering
-		modTerms = self.filtering()
-		print 'Number of terms after filtering: ', len(modTerms)
+		self.modTerms = modTerms = self.pairFilter()
+		print 'No. of terms after filtering: ', len(modTerms)
+		
+		self.subSelect(modTerms)
 		
 		simMatrix = self.resnick(modTerms)
 		
@@ -207,28 +217,53 @@ class GoTree:
 		f.close()
 		
 	
-	def filtering(self):
+	def pairFilter(self):
 		modTerms = set()
+		
+		#Finding out the root nodes
+		rootNodes = set()
 		for goId, term in self.terms.iteritems():
-			try:
-				parents = term.tags['is_a']
-			except:
-				print term.tags
-				print "\n\n"
+			if "is_a" not in term.tags:
+				rootNodes.add(term.id)
+		
+		#Finding out the direct descendants of root node
+		underRoot = set()		
+		for goId, term in self.terms.iteritems():
+			if "is_a" not in term.tags:
+				# Must be a root node, and hence no parents
 				continue
+			
+			parents = term.tags['is_a']
 				
 			for parent in parents:
 				parentId = parent.value
-				if parentId in self.terms:
-					tValue = self.tTest(term.correlationList, self.terms[parentId].correlationList)
+				if parentId in rootNodes:
+					underRoot.add(term.id)
 					
-					if tValue < 0:
-						modT = -1 * tValue
-					else:
-						modT = tValue
+		for goId, term in self.terms.iteritems():
+			if goId in rootNodes or goId in underRoot:
+				#Direct descendants are being neglected now, 
+				# but an exception is made for their children
+				# i.e. If their children doesn't pass the t-test
+				# then the direct descendant can be selected
+				continue
+			
+			parents = term.tags['is_a']
+				
+			for parent in parents:
+				parentId = parent.value
+				if parentId in self.terms:	
+
+					tValue = tTest(term.correlationList, self.terms[parentId].correlationList)
+					
+					if tValue < 0 and parentId not in underRoot:
+						# The mean of the parent is greater, so neglecting the term
+						continue
+					
+					modT = math.fabs(tValue)
 					
 					#Using one tailed pValue
-					pValue = self.pCalculator(modT, len(term.correlationList) + len(self.terms[parentId].correlationList) - 2)
+					pValue = pCalculator(modT, len(term.correlationList) + len(self.terms[parentId].correlationList) - 2)
 					
 					print tValue, pValue
 					
@@ -238,10 +273,24 @@ class GoTree:
 					
 					if pValue < self.significanceLevel and tValue > 0:
 						modTerms.add(term)
+					elif parentId in underRoot and pValue  < self.significanceLevel and tValue < 0:
+						modTerms.add(self.terms[parentId])
 					else:
 						print 'Not selected: ',pValue
 					
 		modTerms = list(modTerms)		
+		return modTerms
+		
+	def greedyFilter(self):
+		termsList = []
+		for term in self.terms.itervalues():
+			termsList.append((term, term.meanCorrelation))
+			
+		termsList = sorted(termsList, key = operator.itemgetter(1), reverse = True)
+		
+		modTerms = []
+		for term, meanCorrelation in termsList[:200]:
+			modTerms.append(term)
 		return modTerms
 						
 	def resnick(self, terms):
@@ -279,111 +328,97 @@ class GoTree:
 				
 		return simMatrix
 		
+	def subSelect(self, terms):
+		'''
+		Implements the algorithm for selecting summarizing labels.
+		Takes the terms and return the labels
+		'''
+		if not isinstance(terms, list):
+			raise Exception("Input to subSelect, must be a list")
+		
+		children = defaultdict(set)
+		for i, term in enumerate(terms):
+			tempAncestors = self.tree.ancestors(term.id)
+			for ancestor in tempAncestors:
+				 children[ancestor.id].add(term.id)
+		
+		ancestorScores = [(termId, len(temp)) for termId, temp in children.iteritems() ]
+		
+		#Finding the immediate children of all terms in ancestor
+		directChildren = defaultdict(set)
+		ancestorsId = children.keys()
+		for termId in ancestorsId:
+			term = self.tree.ensure_term(termId)
+			if "is_a" in term.tags:
+				parents = term.tags["is_a"]
+				for parent in parents:
+					parentId = parent.value
+					directChildren[parentId].add(termId)
 					
 		
-	def tTest(self, series1, series2):
-		num1 = len(series1)
-		num2 = len(series2)
+		#Find minimum and maximum score
+		minScore = min(ancestorScores, key = operator.itemgetter(1))[1]
+		maxScore = max(ancestorScores, key = operator.itemgetter(1))[1]
 		
-		mean1 = sum(series1)/float(num1)
-		mean2 = sum(series2)/float(num2)
-		numerator = mean1 - mean2
-		
-		variance1 = sum( pow((mean1 - i), 2) for i in series1) / float(num1)
-		variance2 = sum( pow((mean2 - i), 2) for i in series2) / float(num2)
-		denominator = pow( (pow(variance1, 2)/num1) + (pow(variance2, 2)/num2), 0.5)
-		
-		try:
-			result = (numerator/denominator)
-		except:
-			print variance1
-			print series1
-			print variance2
-			print series2
+		#Dividing data into 10 bins
+		binSize = (maxScore - minScore)/15.0
+		i = maxScore
+		while i >=  (minScore-binSize):
+			selectedIds = [ancestorId for ancestorId, score in ancestorScores if score > i]
+			i -= binSize
 			
+			selectedSet = set(selectedIds)
 			
-		return result
+			leafNodesId = []
+			for termId in selectedIds:
+				isLeaf = True
+				tempChildren = list(directChildren[termId])
+				for childId in tempChildren:
+					if childId in selectedSet:
+						isLeaf = False
+						break
+				if isLeaf:
+					leafNodesId.append(termId)
 			
-		
-	memoize = {}
-	def dfParam(self, df):
-		'Gives the part dependent upon degree of freedom in the probability distribution function'
-		df = int(df)
-		if df not in self.memoize:
-			if (df%2) == 0:
-				#if even
-				factor = 0.5
-			else:
-				# if odd
-				factor = 1.0 / math.pi
+			if len(leafNodesId) == 0:
+				continue
+			
+			print "Initially ", len(selectedIds), "Leaf nodes", len(leafNodesId)
+			
+			finalSelection = []
+			alreadyIn = set()
+			remaining = leafNodesId[:]
+			target = 0.9 * len(terms)
+			while True:
+				if len(alreadyIn) > target:
+					break
+				maxLen = 0
+				maxId = None
+				maxSet = None
 				
-			numerator = 1.0
-			denominator = math.sqrt(df)
-			for i in xrange(df - 1, 1, -2):
-				numerator = numerator * i
-			for i in xrange(df - 2, 1, -2):
-				denominator = denominator * i
+				for nodeId in remaining:
+					uniqueNodes = children[nodeId].difference(alreadyIn)
+					if len(uniqueNodes) > maxLen:
+						maxLen = len(uniqueNodes)
+						maxSet = uniqueNodes
+						maxId = nodeId
+				
+				if maxSet is None:
+					break
+				
+				finalSelection.append(maxId)
+				alreadyIn.update(maxSet)
 			
-			result = (float(numerator)/denominator) * factor
-			self.memoize[df] = result
-		return self.memoize[df]
-		
-	def tDist(self, x, df):
-		'Gives the probability density function of t-distribution'	
-		return  self.dfParam(df) * pow( (1 + (x*x/float(df))), -1 * 0.5 * (df + 1) )
-	
-	def pCalculator(self, tValue,  df):
-		'''
-		The p value is calculated by measuring the area under the curve from the tValue to a certain high value.
-		So, always give a positive tValue
-		'''
-		#Integration through Simpson rule
-		initialX = tValue
-		finalX = tValue + 10.0
-		numIntervals = 500
-		h = (finalX - initialX)/float(numIntervals)
-		
-		pValue = self.tDist(initialX, df) + self.tDist(finalX, df)
-		tempSum = 0
-		for i in xrange(1, numIntervals/2):
-			tempSum += self.tDist(initialX + (h*2*i), df)
-		pValue += (2*tempSum)
-		tempSum = 0
-		for i in xrange(1, (numIntervals/2) + 1):
-			tempSum += self.tDist(initialX + (h*((2*i) - 1)), df)
-		pValue += 4*tempSum
-		
-		pValue = (h/3.0) * pValue
-		return pValue	#only gives the one sided p value
-		
-		#Integration by a method which assumes the function to be constant
-		# in small intervals (Also gives good results but simpsons is established)
-		
-		# pValue = 0
-		# numIntervals = 2000
-		# initialX = tValue
-		# finalX = tValue + 10.0
-		
-		# interval = (finalX - initialX)/ numIntervals
-		# i = tValue
-		# while i < (tValue + 10.0):
-		
-			# temp = self.tDist(i, df)
-			# if temp < 0.000001:
-				# break
-			# pValue += (temp * interval)
+			print "Initially ", len(selectedIds), "Leaf nodes", len(leafNodesId), "Final Selection", len(finalSelection)
 			
-			# i += interval
-			
-		# return pValue
-
-
+				
 		
 if __name__ == "__main__":
 	import sys, time
-	
+	t = time.time()
 	microarray = MicroArray('data/Birnbaum.csv')
 	
 	temp = GoTree('data/gene_ontology.obo', 'data/gene_association.tair', microarray)
 	
+	print 'Total time taken: ', time.time() - t
 		

@@ -147,7 +147,8 @@ class MDS:
 				if (oldStress - stress) < 0.1:
 					break
 			
-			print 'Iteration: ', j, '\tStress: ', self.stress()
+			if j%20 == 0:
+				print 'Iteration: ', j, '\tStress: ', self.stress()
 			#time.sleep(1)
 		
 		# Publishing coordinates to a file
