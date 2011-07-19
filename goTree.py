@@ -5,6 +5,10 @@ from microarray import MicroArray
 from gzip import GzipFile
 from collections import defaultdict
 
+if __name__ != "__main__":
+	import sys
+	sys.stdout = open("data/debug.txt", "ab")
+
 def annotations(fileObj, evidenceCodes = []):
 	'''
 	Takes only 3 things from the annotation file, db_object_id and go_id, while evidence_code are used for filterDataing
@@ -372,6 +376,8 @@ class GoTree:
 			# i += interval
 			
 		# return pValue
+
+
 		
 if __name__ == "__main__":
 	import sys, time
