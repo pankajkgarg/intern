@@ -26,13 +26,15 @@
   <!-- All JavaScript at the bottom, except for Modernizr which enables HTML5 elements & feature detects -->
   <script src="/static/modernizr-1.7.min.js"></script>
 
+{% block head %} {% endblock %}
+
 </head>
 
 <body>
 
   <div id="container">
     <header>
-		<h2>GoCharts Web Engine </h2>
+		<h2>GoCharts Web Engine </h2> <br /> <br />
 		{% block header %}
 		{% endblock %}
     </header>

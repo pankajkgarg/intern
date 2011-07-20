@@ -117,6 +117,7 @@ class GoTree:
 			ontologyFile,  
 			annotationFile, 
 			microarray,
+			uid,
 			name = 'results',
 			evidenceCodes = []
 		):
@@ -129,10 +130,12 @@ class GoTree:
 		
 		self.significanceLevel = 0.05
 		
+		self.uid = uid
 		self.name = name
 		
 		self.ontologyFile = ontologyFile
 		self.annotationFile = annotationFile
+		self.microarray = microarray
 		
 		self.totalGenes = microarray.numGenes
 		
@@ -216,16 +219,36 @@ class GoTree:
 				"score": term.meanCorrelation,
 			})
 		
-		f = open( os.path.join('results', self.name + '_terms.js') , "wb")
+		f = open( os.path.join('results', self.uid + '_data.js') , "wb")
 		text = "var data = " + json.dumps(data)
 		f.write(text)
 		f.close()
 		
 		
-		f = open( os.path.join('results', self.name + '_zoomLabels.js') , "wb")
-		text = "var data = " + json.dumps(zoomLabels)
+		f = open( os.path.join('results', self.uid + '_zoomLabels.js') , "wb")
+		text = "var zoomLabels = " + json.dumps(zoomLabels)
 		f.write(text)
 		f.close()
+		
+		info = {}
+		info['uid'] = self.uid
+		info['name'] = self.name
+		info['microArrayFile'] = self.microarray.name
+		if isinstance(self.ontologyFile, file):
+			info['ontologyFile'] = self.ontologyFile.name
+		else:
+			info['ontologyFile'] = self.ontologyFile
+		
+		if isinstance(self.annotationFile, file):
+			info['annotationFile'] = self.annotationFile.name
+		else:
+			info['annotationFile'] = self.annotationFile
+		
+		f = open(os.path.join('results', self.uid + '_info.js') , "wb")
+		text = "var info = " + json.dumps(info)
+		f.write(text)
+		f.close()
+		
 	
 	def pairFilter(self):
 		modTerms = set()

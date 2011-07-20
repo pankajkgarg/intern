@@ -1,7 +1,44 @@
 {% extends "base.html" %}
 
+{% block head %}
+	<style type='text/css' >
+		.deleteButton {
+			visibility:hidden;
+		}
+		
+		
+	</style>
+{% endblock %}
+
 {% block main %}
 	<form method="POST" enctype="multipart/form-data" >
 		{{form|safe}}
 	</form>
+{% endblock %}
+
+{% block footer %}
+	<table>
+		<thead><tr>
+			<th>Id</th>
+			<th>Name</th>
+			<th>Description</th>
+			<th>Action</th>
+		</th></thead>
+		<tbody>
+		{% for row in history %}
+			<tr class='historyRow'>
+				<th>{{ row['id']|wordwrap(40, False) }}</th>
+				<th>{{ row['name']|wordwrap(40, False) }}</th>
+				<th>{{ row['description']|wordwrap(40, False) }}</th>
+				<th<button id="{{row['id']}}" class='deleteButton' >Delete</button></th>
+			</tr>
+		{% endfor %}
+		</tbody>
+	</ul>
+	
+	<script type='text/javascript'>
+		$.ready(function(){
+			$('.historyRow').hover(function()
+		})
+	</script>
 {% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block head %}
+	<script type="text/javascript" src="d3-1.21.0/d3.js"></script>
+	<script type="text/javascript" src="d3-1.21.0/d3.behavior.js"></script>
+	
+    <style type="text/css">
+
+svg {
+  font: 10px sans-serif;
+  stroke-width: 1.5;
+}
+    </style>
+    
+{% endblock %}
+    
+{% block header %}
+<script type="text/javascript" src="{{info.dataFile}}"> </script>
+<script type="text/javascript" src="{{info.zoomLabelsFile}}"> </script>
+<script type="text/javascript" src="d3.js"></script>
+{% endblock %}
+
+</body>
+</html>
+

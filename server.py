@@ -6,7 +6,7 @@ from web import form
 import goTree
 from jinja2 import Environment, PackageLoader
 from microarray import MicroArray
-import re, Queue, threading, string, random, os
+import re, Queue, threading, string, random, os, sqlite3, json
 from pprint import pprint
 
 #render = web.template.render('templates/')
@@ -17,9 +17,38 @@ print __name__
 
 urls = (
 	'/', 'home',
+	'/view/(?P<jobId>[^/]+)', 'view'
 )
 
 app = web.application(urls, globals(), autoreload = None)
+
+def dbConn():
+	conn = sqlite3.connect(os.path.join('results', 'results.db')
+	conn.row_factory = sqlite3.Row
+	return conn
+
+def db(func):
+	'A decorator to manage sqlite connections'
+	'Only works upon methods'
+	
+	def wrapper(*args, **kwargs):
+		conn = dbConn()
+		cursor = conn.cursor()
+		result = conn(self, cursor, *args, **kwargs)
+		conn.commit()
+		cursor.close()
+		return result
+	return wrapper
+		
+
+def dbSetup():
+	'Function to setup required tables etc.'
+	conn = dbConn()
+	cursor = conn.cursor()
+	cursor.execute('create table if not exists results (id text, name text, description text, timestamp int)')
+	conn.commit()
+	cursor.close()
+	
 
 vemail = form.regexp(r"^$|.*@.*", "must be a valid email address")
 vnums = form.regexp(r"[0-9]+\s*,?\s*", 'must be a list of comma separatad numbers e.g "2,7,12" ')
@@ -39,6 +68,7 @@ inputForm = form.Form(
 	form.Dropdown("evidenceCodes", args=["all", "exp"], value="all", description="Evidence Codes"),
 	
 	form.Textbox("jobName", description = "Job Name (Optional)"),
+	form.Textarea("description", description="Description"),
 	form.Textbox('email', vemail, description = 'Email (optional)'),
 	form.Button("submit", type="submit", description="Submit"),
 )
@@ -75,20 +105,45 @@ def process(jobQueue):
 		#Shall do the processing and shall save the results in 'results' directory 
 		#	with the filename  "kwargs['name']" + ".js"
 
-		temp = goTree.GoTree(kwargs['ontologyFile'], kwargs['annotationFile'], microarray, name = kwargs['jobId'], evidenceCodes = kwargs['evidenceCodes'])
-	
+		temp = goTree.GoTree(kwargs['ontologyFile'], kwargs['annotationFile'], microarray, uid = kwargs['jobId'], name = kwargs['jobName'], evidenceCodes = kwargs['evidenceCodes'])
+		
+		
+		os.remove(kwargs['ontologyFile']
+		os.remove(kwargs['annotationFile']
+		os.remove[kwargs['microarrayFile']
+		
+		#Add to the database
+		conn = dbConn()
+		cursor = conn.cursor()
+		cursor.exeucte('insert into results values (?, ?, ?, ?)', (kwargs['jobId'], kwargs['jobName'], kwargs['description'], int(time.time())) )
+		conn.commit()
+		cursor.close()
+		
+		
 		if kwargs["email"] is not None:
 			email(**kwargs)
 	
 			
 			
 class home:
-	def GET(self):
+	@db
+	def GET(self, cursor):
 		f = inputForm()
 		
 		formText = f.render()
 		
-		return env.get_template("home.html").render(form = formText, )
+		results = cursor.execute('select * from results order by timestamp desc')
+		results = cursor.fetchall()
+		
+		modResult = []
+		for row in results:
+			modResult.append(dict(row))
+		
+		pprint(modResult)
+		
+		historyRows = json.dumps(modResult)
+		
+		return env.get_template("home.html").render(form = formText, history = historyRows)
 		#return render.register(f)
 	def POST(self):
 		f = inputForm()
@@ -99,13 +154,17 @@ class home:
 			dataDict = dict(f.value)
 			dataDict["jobId"] = randomId()
 			
-			ontologyPath = os.path.join("data", "ontologyFile.obo")
+			
+			#Post data contains file content
+			# The following code writes that data into a local file and replaces 
+			# the dictionary value by filename
+			ontologyPath = os.path.join("data", dataDict["jobId"] + "_ontology.obo")
 			f = open(ontologyPath, "wb")
 			f.write(dataDict["ontologyFile"])
 			f.close()
 			dataDict["ontologyFile"] = ontologyPath
 			
-			annotationPath = os.path.join("data", "annotations.txt")
+			annotationPath = os.path.join("data", dataDict["jobId"] + "_annotations.txt")
 			f = open(annotationPath, "wb")
 			f.write(dataDict["annotationFile"])
 			f.close()
@@ -121,6 +180,44 @@ class home:
 			 
 			jobQueue.put(dataDict)
 			return "Done"
+
+
+class view:
+	@db
+	def GET(self, cursor, jobId):
+		cursor.execute("select from results where id = ?", (jobId, ))
+		info = dict(cursor.fetchone())
+		
+		info['dataFile'] = os.path.join('results', info['id'] + '_data.js')
+		info['zoomLabelsFile'] = os.path.join('results', info['id'] + '_zoomLabels.js')
+		
+		return env.get_template("view.html").render(info = info, )
+		
+
+class clearHistory:
+	@db
+	def POST(self, cursor):	
+		cursor.execute('delete from results where 1')
+		return
+
+class giveHistory:
+	@db
+	def POST(self, cursor)
+		data = web.data()
+		print 'Data to giveHistory'
+		pprint(data)
+		
+		
+
+class deleteRow:
+	@db
+	def POST(self, cursor):
+		data = web.data()
+		print 'Data given to delete'
+		pprint(data)
+		
+		cursor.execute('delete from results where id = ?', (data, ))	
+	
 	
 def randomId(idLen = 7):	
 	allChars = string.ascii_lowercase + "0123456789"
@@ -180,4 +277,5 @@ if __name__ == "__main__":
 	#signal.pause()
 	print "setup of Ctrl + C complete"
 	
+	dbSetup()
 	app.run()
