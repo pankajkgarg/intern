@@ -42,9 +42,7 @@ def annotations(fileObj, evidenceCodes = []):
 
 	
 class GoTerm():
-	"This class takes care of t-test for a Go Tree node"
-	
-	def __init__(self, termObj, genes, totalGenes):
+	def __init__(self, termObj, genes = [], totalGenes = 0):
 		''''
 		termObj - instance of go.Term
 		genes - A list or set of instances of Gene
@@ -60,11 +58,11 @@ class GoTerm():
 		self.numGenes = len(self.genes)
 		
 		# Information content
-		try:
-			self.ic = -1 * math.log(float(self.numGenes)/totalGenes)	
-		except Exception, info:
-			print info
-			raise Exception('Trouble with information content  ' + str(self.numGenes) + '  ' +  str(totalGenes))
+		# try:
+			# self.ic = -1 * math.log(float(self.numGenes)/totalGenes)	
+		# except Exception, info:
+			# print info
+			# raise Exception('Trouble with information content  ' + str(self.numGenes) + '  ' +  str(totalGenes))
 		
 		if self.numGenes:
 			self.numCols = len(self.genes[0].profile)
@@ -81,6 +79,8 @@ class GoTerm():
 		
 		
 	def computeCorrelation(self):
+		if self.numGenes == 0:
+			return
 		
 		if self.numGenes == 1:
 			self.correlationList = [1.0]
@@ -168,8 +168,6 @@ class GoTree:
 		self.modTerms = modTerms = self.pairFilter()
 		print 'No. of terms after filtering: ', len(modTerms)
 		
-		self.subSelect(modTerms)
-		
 		simMatrix = self.resnick(modTerms)
 		
 		#Converting into dissimilarity matrix
@@ -179,7 +177,13 @@ class GoTree:
 		mdsInstance = mds.MDS(disMatrix)
 		coordinates = mdsInstance.process()
 		
-		self.save(modTerms, coordinates)
+		for i,row in enumerate(coordinates): 
+			modTerms[i].x = row[0]
+			modTerms[i].y = row[1]
+		
+		zoomLabels = self.subSelect(modTerms)
+		
+		self.save(modTerms, zoomLabels)
 		
 		#self.terms = {}
 		#for term in modTerms:
@@ -200,22 +204,28 @@ class GoTree:
 		return disMatrix
 		
 		
-	def save(self, terms, coordinates):
+	def save(self, terms, zoomLabels):
 		data = []
 		for i,term in enumerate(terms):	
 			data.append({
 				"i": i,
-				"x": coordinates[i][0],
-				"y": coordinates[i][1],
+				"x": term.x,
+				"y": term.y,
+				"goId": term.id,
 				"label": term.name,
 				"score": term.meanCorrelation,
 			})
 		
-		f = open( os.path.join('results', self.name + '.js') , "wb")
+		f = open( os.path.join('results', self.name + '_terms.js') , "wb")
 		text = "var data = " + json.dumps(data)
 		f.write(text)
 		f.close()
 		
+		
+		f = open( os.path.join('results', self.name + '_zoomLabels.js') , "wb")
+		text = "var data = " + json.dumps(zoomLabels)
+		f.write(text)
+		f.close()
 	
 	def pairFilter(self):
 		modTerms = set()
@@ -360,12 +370,13 @@ class GoTree:
 		minScore = min(ancestorScores, key = operator.itemgetter(1))[1]
 		maxScore = max(ancestorScores, key = operator.itemgetter(1))[1]
 		
+		labels = []
+		lastLabelSet = set()
 		#Dividing data into 10 bins
 		binSize = (maxScore - minScore)/15.0
-		i = maxScore
+		i = lastI = maxScore
 		while i >=  (minScore-binSize):
 			selectedIds = [ancestorId for ancestorId, score in ancestorScores if score > i]
-			i -= binSize
 			
 			selectedSet = set(selectedIds)
 			
@@ -381,9 +392,9 @@ class GoTree:
 					leafNodesId.append(termId)
 			
 			if len(leafNodesId) == 0:
+				lastI = i
+				i -= binSize
 				continue
-			
-			print "Initially ", len(selectedIds), "Leaf nodes", len(leafNodesId)
 			
 			finalSelection = []
 			alreadyIn = set()
@@ -409,9 +420,51 @@ class GoTree:
 				finalSelection.append(maxId)
 				alreadyIn.update(maxSet)
 			
-			print "Initially ", len(selectedIds), "Leaf nodes", len(leafNodesId), "Final Selection", len(finalSelection)
 			
+			if len(finalSelection) >  2* len(lastLabelSet) and len(lastLabelSet) > 3 and lastI != i and binSize/(lastI - i) < 10:
+				i = i + ((lastI - i)/2.0)
+				continue
+			elif set(finalSelection) != lastLabelSet:
+				if len(lastLabelSet) == len(finalSelection):
+					labels.pop()
+				labels.append(finalSelection)
+				lastLabelSet = set(finalSelection)
 				
+				# print "Initially ", len(selectedIds), "Leaf nodes", len(leafNodesId), "Final Selection", len(finalSelection)
+				# print 'leafNodes', leafNodesId
+				# print 'Final selection',  finalSelection
+				
+			lastI = i
+			i -= binSize
+				
+			
+		
+		termDict = {}
+		for term in terms:
+			termDict[term.id] = term
+		
+		# Key will represent zoom level, and values will be a set of terms 
+		#	with properties x coordinate, y coordinate and name, and go id
+		finalLabels = {}
+		for zoomLevel, labelList in enumerate(labels):
+			tempLabels = [] 
+			for labelId in labelList:
+				meanX = 0.0
+				meanY = 0.0
+				for childId in children[labelId]:
+					meanX += termDict[childId].x
+					meanY += termDict[childId].y
+					
+				tempTerm["x"] = meanX/float(len(children[labelId]))
+				tempTerm["y"] = meanX/float(len(children[labelId]))
+				tempTerm["score"] = len(children[labelId])
+				tempTerm["label"] = self.tree.ensure_term(labelId).name
+				tempTerm["goId"] = labelId
+				tempLabels.append(tempTerm)
+			
+			finalLabels[zoomLevel] = tempLabels
+			
+		return finalLabels
 		
 if __name__ == "__main__":
 	import sys, time

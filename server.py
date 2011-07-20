@@ -19,7 +19,7 @@ urls = (
 	'/', 'home',
 )
 
-app = web.application(urls, globals())
+app = web.application(urls, globals(), autoreload = None)
 
 vemail = form.regexp(r"^$|.*@.*", "must be a valid email address")
 vnums = form.regexp(r"[0-9]+\s*,?\s*", 'must be a list of comma separatad numbers e.g "2,7,12" ')
