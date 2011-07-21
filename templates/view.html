@@ -33,17 +33,17 @@ svg {
 Job Id:<h3 style="font-style:italic; display:inline;"> {{info.id}}</h3>
 {% endblock %}
 
-{% block main %}
-    <div id="svgRoot">
+{% block afterFooter %}
+    <div id="svgRoot" style='background-color:white; width: 1200px; margin: auto; padding-top: 20px;'>
     </div>
-    
+    <script type="text/javascript" src="/{{info.dataFile}}"> </script>
+<script type="text/javascript" src="/{{info.zoomLabelsFile}}"> </script>
+<script type="text/javascript" src="/static/custom.js"></script>
     
 {% endblock %}
 
 {% block footer %}
-<script type="text/javascript" src="/{{info.dataFile}}"> </script>
-<script type="text/javascript" src="/{{info.zoomLabelsFile}}"> </script>
-<script type="text/javascript" src="/static/custom.js"></script>
+
 {% endblock %}
 
 </body>

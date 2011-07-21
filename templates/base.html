@@ -21,6 +21,7 @@
 
   <!-- CSS: implied media="all" -->
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/custom.css">
 
 
   <!-- All JavaScript at the bottom, except for Modernizr which enables HTML5 elements & feature detects -->
@@ -36,15 +37,19 @@
 
 {% block head %} {% endblock %}
 
-Result Id: <input type='text' id='searchBox' /> <button value='Search' id='searchButton' >Search </button>
-
 </head>
 
 <body>
 
   <div id="container">
     <header>
-		<h2>GoCharts Web Engine </h2> <br /> <br />
+    	
+		<div id="menu"> <a href="/"> Home </a> </div>
+		<div id="search">
+			Result Id: <input type="text" id="searchBox"> <button id="searchButton" value="Search">Search </button>
+        </div>
+		<div id="title">GoCharts Web Engine </div>
+  
 		{% block header %}
 		{% endblock %}
     </header>
@@ -53,20 +58,22 @@ Result Id: <input type='text' id='searchBox' /> <button value='Search' id='searc
 		{% endblock %}
     </div>
     <footer>
-		<table>
+    <div id='footerContainer'>
+    	<h1> History </h1>
+		<table id='mytable'>
 			<thead><tr>
-				<th>Id</th>
-				<th>Name</th>
-				<th>Description</th>
-				<th>Action</th>
+				<th scope='col'>Id</th>
+				<th scope='col'>Name</th>
+				<th scope='col'>Description</th>
+				<th scope='col'>Action</th>
 			</th></thead>
 			<tbody>
 			{% for row in history %}
 				<tr class='historyRow'>
-					<th><a href='/view/{{row['id']}}'> {{ row['id'] }} </a> </th>
-					<th>{{ row['name'] }}</th>
-					<th>{{ row['description'] }}</th>
-					<th<button id="{{row['id']}}" class='deleteButton' >Delete</button></th>
+					<th scope="row" class="{{ loop.cycle("spec", "specalt")}}"><a href='/view/{{row['id']}}'> {{ row['id'] }} </a> </th>
+					<td>{{ row['name'] }}</td>
+					<td>{{ row['description'] }}</td>
+					<td<button id="{{row['id']}}" class='deleteButton' >Delete</button></td>
 				</tr>
 			{% endfor %}
 			</tbody>
@@ -74,9 +81,15 @@ Result Id: <input type='text' id='searchBox' /> <button value='Search' id='searc
     
 		{% block footer %}
 		{% endblock %}
+	</div>
     </footer>
+    
+   
+    
   </div> <!--! end of #container -->
 
+	 {% block afterFooter %}
+    {% endblock %}
 
   <!-- JavaScript at the bottom for fast page loading -->
 

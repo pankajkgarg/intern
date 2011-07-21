@@ -1,7 +1,7 @@
 
 var settings = {
-	"width": 1600,
-	"height": 800,
+	"width": 1200,
+	"height": 700,
 	"padding" : [1, 1, 1, 1], // top right bottom left
 	"fontResize": false,
 	"circleResize": false,

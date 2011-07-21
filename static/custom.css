@@ -1,0 +1,126 @@
+body{
+    background: url(http://3dciencia.com/blog/wp-content/uploads/2011/01/methylated-BDNF-DNA-epigenetics-epigenetica-ADN-metilado-atomic-structure.jpg);
+    background-repeat: no-repeat;
+    background-position: center;
+    font-family: sans-serif;
+}
+
+#container {
+	width: 800px;
+	margin: auto;
+}
+
+#title {
+    text-align: center;
+  clear: right;
+  font-size: 25px;
+  margin-top: 15px;
+  padding: 0px;
+}
+
+#search {
+    float: right;
+}
+
+#menu {
+  display: inline;
+  font-size: 18px;
+}
+
+header {
+    margin-bottom: 20px;
+    background: rgba(255,255,255,0.95);
+   
+}
+
+footer {
+	margin-top: 20px;
+}
+footer table {
+	width: 700px;
+}
+
+#main, #footerContainer {
+  background: rgba(255,255,255, 0.95);
+  border-radius: 6px;
+  padding: 10px;
+  width: 700px;
+  margin: auto;
+}
+
+button  {
+ % background: none
+  
+}
+
+th {
+    font-weight: normal;
+    text-align: left;
+}
+
+textarea {
+   width: 280px;
+}
+
+#submit {
+    text-align: center;
+    margin-top: 15px;
+}
+
+#footerContainer thead th {
+  font-size: 16px;
+}
+
+#footerContainer td, #footerContainer th {
+%  border: 1px solid;
+  margin: 0px;
+}
+
+th {
+	font: bold 11px "Trebuchet MS", Verdana, Arial, Helvetica, sans-serif;
+	color: #4f6b72;
+	border-right: 1px solid #C1DAD7;
+	border-bottom: 1px solid #C1DAD7;
+	border-top: 1px solid #C1DAD7;
+	letter-spacing: 2px;
+	text-transform: uppercase;
+	text-align: left;
+	padding: 6px 6px 6px 12px;
+	background: #CAE8EA url(/static/bg_header.jpg) no-repeat;
+}
+
+th.nobg {
+	border-top: 0;
+	border-left: 0;
+	border-right: 1px solid #C1DAD7;
+	background: none;
+}
+
+td {
+	border-right: 1px solid #C1DAD7;
+	border-bottom: 1px solid #C1DAD7;
+	background: #fff;
+	padding: 6px 6px 6px 12px;
+	color: #4f6b72;
+}
+
+
+td.alt {
+	background: #F5FAFA;
+	color: #797268;
+}
+
+th.spec {
+	border-left: 1px solid #C1DAD7;
+	border-top: 0;
+	background: #fff url/static/bullet1.gif) no-repeat;
+	font: bold 10px "Trebuchet MS", Verdana, Arial, Helvetica, sans-serif;
+}
+
+th.specalt {
+	border-left: 1px solid #C1DAD7;
+	border-top: 0;
+	background: #f5fafa url(/static/bullet2.gif) no-repeat;
+	font: bold 10px "Trebuchet MS", Verdana, Arial, Helvetica, sans-serif;
+	color: #797268;
+}
