@@ -2,9 +2,6 @@
 
 {% block head %}
 	<style type='text/css' >
-		.deleteButton {
-			visibility:hidden;
-		}
 		
 		
 	</style>
@@ -17,28 +14,5 @@
 {% endblock %}
 
 {% block footer %}
-	<table>
-		<thead><tr>
-			<th>Id</th>
-			<th>Name</th>
-			<th>Description</th>
-			<th>Action</th>
-		</th></thead>
-		<tbody>
-		{% for row in history %}
-			<tr class='historyRow'>
-				<th>{{ row['id'] }}</th>
-				<th>{{ row['name'] }}</th>
-				<th>{{ row['description'] }}</th>
-				<th<button id="{{row['id']}}" class='deleteButton' >Delete</button></th>
-			</tr>
-		{% endfor %}
-		</tbody>
-	</ul>
 	
-	<script type='text/javascript'>
-		$.ready(function(){
-			$('.historyRow').hover(function()
-		})
-	</script>
 {% endblock %}

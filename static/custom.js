@@ -128,14 +128,14 @@ svg.selectAll("circle")
 	.attr("r", radiusFunc);
 	;
 	
-//svg.selectAll("text")
-//	.data(data)
-//	.enter().append("svg:text")
-//		.attr("class", "label")
-//		.attr("x", function(d) { return x(d.x); }) 	//  + (x(d.z) * 0.001)
-//		.attr("y", function(d) { return y(d.y); })
-//		.attr("text-anchor", "right")
-//		.text(function(d) { return String(d.label);});
+svg.selectAll("text")
+	.data(data)
+	.enter().append("svg:text")
+		.attr("class", "label")
+		.attr("x", function(d) { return x(d.x); }) 	//  + (x(d.z) * 0.001)
+		.attr("y", function(d) { return y(d.y); })
+		.attr("text-anchor", "middle")
+		.text(function(d) { return String(d.label);});
 
 
 var selectedLevel = 3;
@@ -159,19 +159,19 @@ for(var level in zoomLabels){
 	if (level > maxLevel) maxLevel = level
 }
 
-var zoomScale = d3.scale.linear()
-	.domain([1.0, 4.0])
-	.range([1, Number(maxLevel)])
-
-svg.selectAll("text")
+svg.selectAll("text.zoomLabel")
 	.data(allLabels)
 	.enter().append("svg:text")
 	.attr("class", function(d) { return "zoomLabel invisible level_" + String(d.zoom) })
 	.attr("x", function(d) { return x(d.x); })
 	.attr("y", function(d) { return y(d.y); })
-	.attr("font-size", function(d) { return (60 - (d.zoom*7)) > 14 ? (60 - (d.zoom*5)) : 14 ; })
+	.attr("font-size", function(d) { return (50 - (d.zoom*4)) > 14 ? (60 - (d.zoom*5)) : 14 ; })
 	.attr("text-anchor", "middle")
 	.text(function(d){ return String(d.label); })
+
+var zoomScale = d3.scale.linear()
+	.domain([1.0, 3.0])
+	.range([1, Number(maxLevel)])
 	
 	
 redraw();
@@ -236,12 +236,12 @@ function redraw() {
 	gy.exit().remove();
 	
 	var s = x(1) - x(0)
-	var scale = Math.floor(d3.event ? d3.event.scale : 1);
+	var scale = (d3.event ? d3.event.scale : 1);
 	// This equation give zoom levels as 1, 2, 3 instead of 2, 4, 8, 16
 	var zoomLevel = (d3.event ? (Math.log(d3.event.scale)/ Math.LN2) : 1) 
 	
-	console.log(zoomLevel);
-	console.log("scale ", scale)
+	//console.log(zoomLevel);
+	//console.log("scale ", scale)
 	
 	//Display zoom labels corresponding to current scale
 	if (scale == 0) {
@@ -249,14 +249,13 @@ function redraw() {
 	}
 	
 	
-	scale = Math.ceil(zoomScale(scale))
+	scale = Math.ceil(zoomScale(zoomLevel))
+	//console.log("Transformed scale ", scale)
 	if (scale != lastScale){
 		if (lastScale != false){
 			d3.selectAll("text.visible").attr("class", "zoomLabel invisible level_" + String(lastScale) )
-			//$(".level_" + String(lastScale)).toggleClass("visible", false)
 		}
 		d3.selectAll("text.level_" + String(scale)).attr("class", "zoomLabel visible")
-		//$(".level_" + String(scale)).toggleClass("visible", true)
 		lastScale = scale
 	}
 	svg.selectAll("text.zoomLabel")
@@ -275,32 +274,13 @@ function redraw() {
 		;
 	
 	
-	/*
-	var circles = svg.selectAll("circle")[0];
-	var j;
-	
-	//Repulsion algo
-	
-	svg.selectAll("circle")
-		.attr("cx", function(d, i) {
-			for (j = 0; j < i; j++) {
-				if ( Math.pow( (Math.pow((circles[j].cx - x(d.x)), 2) + Math.pow((circles[j].cy - y(d.y)), 2)), 0.5) < 2 ) {
-					return x(d.x) + 2;
-				}else {
-					return x(d.x);
-				}
-					
-			}
-		})	
-			
-	*/
+
 	
 	
 	
 	svg.selectAll("text.label")
 		.attr("x", function(d) {  return x(d.x) + radiusFunc(d) ; })		//  + (x(d.z) * 0.001) + 2
-		.attr("y", function(d) {return y(d.y) + radiusFunc(d) ; })		//  + (0.5 * x(d.z) * 0.001)
-		.attr("text-anchor", "right")
+		.attr("y", function(d) {return y(d.y) - radiusFunc(d) - 5 ; })		//  + (0.5 * x(d.z) * 0.001)
 		.text(function(d) { return ((zoomLevel >= 1.2)? d.label : "") ;});  // ( (d.z >= allowedLabel)? String(d.z) : "" )
 	
 	if (settings.fontResize) { svg.selectAll("text.label").attr("font-size", function(d) { return s * 0.003; }); }

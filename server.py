@@ -65,7 +65,7 @@ inputForm = form.Form(
 	form.File("annotationFile", vfile, description = 'Annotation File'),
 	form.File('ontologyFile', vfile, description = 'Ontology File'),
 	
-	form.File('microarrayFile', vfile, description = 'Microarray file (Only cvs files)'),
+	form.File('microarrayFile', vfile, description = 'Microarray file (Only csv files)'),
 	form.Textbox("ignoreRows", vnums, description = "Rows in microarray to ignore"),
 	form.Textbox("ignoreCols", vnums, description = "Cols in microarray to ignore"),
 	form.Textbox("idCol", vnum, description = "Column containing the Go term Id"),
@@ -129,9 +129,21 @@ def process(kwargs):
 	cursor.close()
 	
 	
-	if kwargs["email"] is not None:
+	if kwargs["email"] is not None and len(kwargs['email']) > 0:
 		email(**kwargs)
 
+
+def giveHistory(cursor):
+	results = cursor.execute('select * from results order by timestamp desc')
+	results = cursor.fetchall()
+	
+	modResult = []
+	for row in results:
+		modResult.append(dict(row))
+	
+	pprint(modResult)
+	
+	return modResult
 		
 			
 class home:
@@ -140,20 +152,10 @@ class home:
 		f = inputForm()
 		
 		formText = f.render()
-		
-		results = cursor.execute('select * from results order by timestamp desc')
-		results = cursor.fetchall()
-		
-		modResult = []
-		for row in results:
-			modResult.append(dict(row))
-		
-		pprint(modResult)
-		
-		historyRows = modResult
-		
-		return env.get_template("home.html").render(form = formText, history = historyRows)
+		return env.get_template("home.html").render(form = formText, history = giveHistory(cursor))
 		#return render.register(f)
+		
+		
 	def POST(self):
 		f = inputForm()
 		if not f.validates():
@@ -189,7 +191,7 @@ class home:
 			 
 			#jobQueue.put(dataDict)
 			process(dataDict)
-			return "Done"
+			raise web.seeother('/')
 
 
 class view:
@@ -201,7 +203,7 @@ class view:
 		info['dataFile'] = os.path.join('results', info['id'] + '_data.js')
 		info['zoomLabelsFile'] = os.path.join('results', info['id'] + '_zoomLabels.js')
 		
-		return env.get_template("view.html").render(info = info, )
+		return env.get_template("view.html").render(info = info, history = giveHistory(cursor))
 
 class results:
 	def GET(self, fileName):
@@ -215,16 +217,8 @@ class clearHistory:
 	def POST(self, cursor):	
 		cursor.execute('delete from results where 1')
 		return
-
-class giveHistory:
-	@db
-	def POST(self, cursor):
-		data = web.data()
-		print 'Data to giveHistory'
-		pprint(data)
 		
 		
-
 class deleteRow:
 	@db
 	def POST(self, cursor):

@@ -399,7 +399,7 @@ class GoTree:
 		#Dividing data into 10 bins
 		binSize = (maxScore - minScore)/15.0
 		i = lastI = maxScore
-		while i >=  (minScore-binSize):
+		while i >=  minScore:
 			selectedIds = [ancestorId for ancestorId, score in ancestorScores if score > i]
 			
 			selectedSet = set(selectedIds)

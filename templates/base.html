@@ -26,7 +26,17 @@
   <!-- All JavaScript at the bottom, except for Modernizr which enables HTML5 elements & feature detects -->
   <script src="/static/modernizr-1.7.min.js"></script>
 
+<style type='text/css' >
+	.deleteButton {
+		visibility:hidden;
+	}
+	
+	
+</style>
+
 {% block head %} {% endblock %}
+
+Result Id: <input type='text' id='searchBox' /> <button value='Search' id='searchButton' >Search </button>
 
 </head>
 
@@ -43,6 +53,25 @@
 		{% endblock %}
     </div>
     <footer>
+		<table>
+			<thead><tr>
+				<th>Id</th>
+				<th>Name</th>
+				<th>Description</th>
+				<th>Action</th>
+			</th></thead>
+			<tbody>
+			{% for row in history %}
+				<tr class='historyRow'>
+					<th><a href='/view/{{row['id']}}'> {{ row['id'] }} </a> </th>
+					<th>{{ row['name'] }}</th>
+					<th>{{ row['description'] }}</th>
+					<th<button id="{{row['id']}}" class='deleteButton' >Delete</button></th>
+				</tr>
+			{% endfor %}
+			</tbody>
+		</table>
+    
 		{% block footer %}
 		{% endblock %}
     </footer>
@@ -61,6 +90,22 @@
   <script src="/static/script.js"></script>
   <!-- end scripts-->
 
+
+<script type='text/javascript'>
+	$.ready(function(){
+		$('.historyRow').hover(function(){
+		
+		})
+	})
+	
+	var searchBox = document.getElementById("searchBox")
+	
+	$('#searchButton').click(function(){
+		document.location.href = '/view/' + searchBox.value;
+	})
+	
+	
+</script>
 
   <!--[if lt IE 7 ]>
     <script src="/static/dd_belatedpng.js"></script>

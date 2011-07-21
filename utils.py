@@ -31,6 +31,11 @@ def dfParam(df):
 	global memoize
 	
 	df = int(df)
+	
+	#If df > 295, then it results in "nan" values, so putting a upper limit
+	if df > 295:
+		df = 295
+	
 	if df not in memoize:
 		if (df%2) == 0:
 			#if even

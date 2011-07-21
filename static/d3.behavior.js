@@ -92,7 +92,7 @@ d3.behavior.zoom = function() {
         } catch (error) {
           // Derp! Hope for the best?
         }
-        delta *= .005;
+        delta *= .002;
       }
       z += delta;
     }
