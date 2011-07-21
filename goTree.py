@@ -1,4 +1,4 @@
-import math, csv, array, operator, json, os
+import math, csv, array, operator, json, os, random
 import gene_ontology as go
 import mds
 from utils import *
@@ -181,8 +181,9 @@ class GoTree:
 		coordinates = mdsInstance.process()
 		
 		for i,row in enumerate(coordinates): 
-			modTerms[i].x = row[0]
-			modTerms[i].y = row[1]
+			#TODO: Look at the random noise added below			
+			modTerms[i].x = row[0] + (random.random() * row[0] * 0.1)
+			modTerms[i].y = row[1] + (random.random() * row[1] * 0.1)
 		
 		zoomLabels = self.subSelect(modTerms)
 		
@@ -233,7 +234,7 @@ class GoTree:
 		info = {}
 		info['uid'] = self.uid
 		info['name'] = self.name
-		info['microArrayFile'] = self.microarray.name
+		info['microArrayFile'] = self.microarray.fileObj.name
 		if isinstance(self.ontologyFile, file):
 			info['ontologyFile'] = self.ontologyFile.name
 		else:
@@ -477,9 +478,10 @@ class GoTree:
 				for childId in children[labelId]:
 					meanX += termDict[childId].x
 					meanY += termDict[childId].y
-					
+				
+				tempTerm = {}	
 				tempTerm["x"] = meanX/float(len(children[labelId]))
-				tempTerm["y"] = meanX/float(len(children[labelId]))
+				tempTerm["y"] = meanY/float(len(children[labelId]))
 				tempTerm["score"] = len(children[labelId])
 				tempTerm["label"] = self.tree.ensure_term(labelId).name
 				tempTerm["goId"] = labelId
@@ -494,7 +496,7 @@ if __name__ == "__main__":
 	t = time.time()
 	microarray = MicroArray('data/Birnbaum.csv')
 	
-	temp = GoTree('data/gene_ontology.obo', 'data/gene_association.tair', microarray)
+	temp = GoTree('data/gene_ontology.obo', 'data/gene_association.tair', microarray, "43jo")
 	
 	print 'Total time taken: ', time.time() - t
 		

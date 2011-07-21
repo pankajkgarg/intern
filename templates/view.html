@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
 {% block head %}
-	<script type="text/javascript" src="d3-1.21.0/d3.js"></script>
-	<script type="text/javascript" src="d3-1.21.0/d3.behavior.js"></script>
+	<script type="text/javascript" src="/static/d3.js"></script>
+	<script type="text/javascript" src="/static/d3.behavior.js"></script>
 	
     <style type="text/css">
 
@@ -10,14 +10,34 @@ svg {
   font: 10px sans-serif;
   stroke-width: 1.5;
 }
+
+.visible {
+	visibility: visible;
+}
+.invisible {
+	visibility: hidden;
+}
+
     </style>
     
 {% endblock %}
     
 {% block header %}
-<script type="text/javascript" src="{{info.dataFile}}"> </script>
-<script type="text/javascript" src="{{info.zoomLabelsFile}}"> </script>
-<script type="text/javascript" src="d3.js"></script>
+<h2>{{info.name}} - {{info.description}}</h2>
+Job Id:<h3 style="font-style:italic; display:inline;"> {{info.id}}</h3>
+{% endblock %}
+
+{% block main %}
+    <div id="svgRoot">
+    </div>
+    
+    
+{% endblock %}
+
+{% block footer %}
+<script type="text/javascript" src="/{{info.dataFile}}"> </script>
+<script type="text/javascript" src="/{{info.zoomLabelsFile}}"> </script>
+<script type="text/javascript" src="/static/custom.js"></script>
 {% endblock %}
 
 </body>

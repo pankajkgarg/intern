@@ -6,7 +6,7 @@ from web import form
 import goTree
 from jinja2 import Environment, PackageLoader
 from microarray import MicroArray
-import re, Queue, threading, string, random, os, sqlite3, json
+import re, Queue, threading, string, random, os, sqlite3, json, time
 from pprint import pprint
 
 #render = web.template.render('templates/')
@@ -17,13 +17,15 @@ print __name__
 
 urls = (
 	'/', 'home',
-	'/view/(?P<jobId>[^/]+)', 'view'
+	'/view/(?P<jobId>[^/]+)', 'view',
+	'/results/(?P<fileName>[^/]+)', 'results',
 )
 
-app = web.application(urls, globals(), autoreload = None)
-
+web.config.debug = True
+app = web.application(urls, globals())
+ 
 def dbConn():
-	conn = sqlite3.connect(os.path.join('results', 'results.db')
+	conn = sqlite3.connect(os.path.join('results', 'results.db'))
 	conn.row_factory = sqlite3.Row
 	return conn
 
@@ -34,7 +36,10 @@ def db(func):
 	def wrapper(*args, **kwargs):
 		conn = dbConn()
 		cursor = conn.cursor()
-		result = conn(self, cursor, *args, **kwargs)
+		kwargs["cursor"] = cursor
+		print args
+		print kwargs
+		result = func(*args, **kwargs)
 		conn.commit()
 		cursor.close()
 		return result
@@ -73,57 +78,61 @@ inputForm = form.Form(
 	form.Button("submit", type="submit", description="Submit"),
 )
 
-def process(jobQueue):
+def queueBased(jobQueue):
 	while True:
 		kwargs = jobQueue.get()
 		
 		if kwargs == None:
 			print 'stopping the process'
 			break	
-	
-		if 'ignoreRows' in kwargs:
-			kwargs['ignoreRows'] = re.sub(r'\s+', '', kwargs['ignoreRows']).split(',')
-			kwargs['ignoreRows'] = [int(temp) for temp in kwargs['ignoreRows']]
-		else:
-			kwargs['ignoreRows'] = []
 		
-		if 'ignoreCols' in kwargs:
-			kwargs['ignoreCols'] = re.sub(r'\s+', '', kwargs['ignoreCols']).split(',')
-			kwargs['ignoreCols'] = [int(temp) for temp in kwargs['ignoreCols']]
-		else:
-			kwargs['ignoreCols'] = []
-	
-		if 'idCol' in kwargs:
-			kwargs['idCol'] = int(kwargs['idCol'])
-			
-		if 'evidenceCodes' in kwargs:
-			if kwargs['evidenceCodes'] == 'all':
-				kwargs['evidenceCodes'] = []
+		return process(kwargs)
 		
-		microarray = MicroArray(kwargs['microarrayFile'], idCol = kwargs['idCol'], ignoreRows = kwargs['ignoreRows'], ignoreCols = kwargs['ignoreCols'] )
-	
-		#Shall do the processing and shall save the results in 'results' directory 
-		#	with the filename  "kwargs['name']" + ".js"
+def process(kwargs):
 
-		temp = goTree.GoTree(kwargs['ontologyFile'], kwargs['annotationFile'], microarray, uid = kwargs['jobId'], name = kwargs['jobName'], evidenceCodes = kwargs['evidenceCodes'])
-		
-		
-		os.remove(kwargs['ontologyFile']
-		os.remove(kwargs['annotationFile']
-		os.remove[kwargs['microarrayFile']
-		
-		#Add to the database
-		conn = dbConn()
-		cursor = conn.cursor()
-		cursor.exeucte('insert into results values (?, ?, ?, ?)', (kwargs['jobId'], kwargs['jobName'], kwargs['description'], int(time.time())) )
-		conn.commit()
-		cursor.close()
-		
-		
-		if kwargs["email"] is not None:
-			email(**kwargs)
+	if 'ignoreRows' in kwargs:
+		kwargs['ignoreRows'] = re.sub(r'\s+', '', kwargs['ignoreRows']).split(',')
+		kwargs['ignoreRows'] = [int(temp) for temp in kwargs['ignoreRows']]
+	else:
+		kwargs['ignoreRows'] = []
 	
-			
+	if 'ignoreCols' in kwargs:
+		kwargs['ignoreCols'] = re.sub(r'\s+', '', kwargs['ignoreCols']).split(',')
+		kwargs['ignoreCols'] = [int(temp) for temp in kwargs['ignoreCols']]
+	else:
+		kwargs['ignoreCols'] = []
+
+	if 'idCol' in kwargs:
+		kwargs['idCol'] = int(kwargs['idCol'])
+		
+	if 'evidenceCodes' in kwargs:
+		if kwargs['evidenceCodes'] == 'all':
+			kwargs['evidenceCodes'] = []
+	
+	microarray = MicroArray(kwargs['microarrayFile'], idCol = kwargs['idCol'], ignoreRows = kwargs['ignoreRows'], ignoreCols = kwargs['ignoreCols'] )
+
+	#Shall do the processing and shall save the results in 'results' directory 
+	#	with the filename  "kwargs['name']" + ".js"
+
+	temp = goTree.GoTree(kwargs['ontologyFile'], kwargs['annotationFile'], microarray, uid = kwargs['jobId'], name = kwargs['jobName'], evidenceCodes = kwargs['evidenceCodes'])
+	
+	
+	os.remove(kwargs['ontologyFile'])
+	os.remove(kwargs['annotationFile'])
+	os.remove(kwargs['microarrayFile'])
+	
+	#Add to the database
+	conn = dbConn()
+	cursor = conn.cursor()
+	cursor.execute('insert into results values (?, ?, ?, ?)', (kwargs['jobId'], kwargs['jobName'], kwargs['description'], int(time.time())) )
+	conn.commit()
+	cursor.close()
+	
+	
+	if kwargs["email"] is not None:
+		email(**kwargs)
+
+		
 			
 class home:
 	@db
@@ -141,7 +150,7 @@ class home:
 		
 		pprint(modResult)
 		
-		historyRows = json.dumps(modResult)
+		historyRows = modResult
 		
 		return env.get_template("home.html").render(form = formText, history = historyRows)
 		#return render.register(f)
@@ -178,21 +187,28 @@ class home:
 			
 			print dataDict
 			 
-			jobQueue.put(dataDict)
+			#jobQueue.put(dataDict)
+			process(dataDict)
 			return "Done"
 
 
 class view:
 	@db
-	def GET(self, cursor, jobId):
-		cursor.execute("select from results where id = ?", (jobId, ))
+	def GET(self, jobId, cursor):
+		cursor.execute("select * from results where id = ?", (jobId, ))
 		info = dict(cursor.fetchone())
 		
 		info['dataFile'] = os.path.join('results', info['id'] + '_data.js')
 		info['zoomLabelsFile'] = os.path.join('results', info['id'] + '_zoomLabels.js')
 		
 		return env.get_template("view.html").render(info = info, )
-		
+
+class results:
+	def GET(self, fileName):
+		f = open(os.path.join("results", fileName))
+		data = f.read()
+		f.close()
+		return data				
 
 class clearHistory:
 	@db
@@ -202,7 +218,7 @@ class clearHistory:
 
 class giveHistory:
 	@db
-	def POST(self, cursor)
+	def POST(self, cursor):
 		data = web.data()
 		print 'Data to giveHistory'
 		pprint(data)
@@ -260,9 +276,9 @@ if __name__ == "__main__":
 	import __builtin__
 	__builtin__.jobQueue = jobQueue
 	
-	thread = threading.Thread(target = process, args = (jobQueue,), )
-	thread.start()
-	print "started the thread"
+#	thread = threading.Thread(target = process, args = (jobQueue,), )
+#	thread.start()
+#	print "started the thread"
 	
 	#For handling Ctrl+C interrupts correctly
 	import signal, sys
@@ -275,7 +291,7 @@ if __name__ == "__main__":
 		sys.exit(0)
 	#signal.signal(signal.SIGINT, signal_handler)
 	#signal.pause()
-	print "setup of Ctrl + C complete"
+	#print "setup of Ctrl + C complete"
 	
 	dbSetup()
 	app.run()
