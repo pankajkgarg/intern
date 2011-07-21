@@ -1,0 +1,148 @@
+ <!doctype html>
+<!--[if lt IE 7 ]> <html class="no-js ie6" lang="en"> <![endif]-->
+<!--[if IE 7 ]>    <html class="no-js ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]>    <html class="no-js ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!--> <html class="no-js" lang="en"> <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+
+  <!-- Always force latest IE rendering engine (even in intranet) & Chrome Frame
+       Remove this if you use the .htaccess -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <title>GoCharts Web Engine</title>
+  <meta name="description" content="Visualization of microarray data in an intuitive way.">
+  <meta name="author" content="Pankaj Garg">
+
+  <!-- Mobile viewport optimized: j.mp/bplateviewport -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="shortcut icon" href="/status/favicon.ico"> 
+
+  <!-- CSS: implied media="all" -->
+  <link rel="stylesheet" href="/static/style.css">
+
+
+  <!-- All JavaScript at the bottom, except for Modernizr which enables HTML5 elements & feature detects -->
+  <script src="/static/modernizr-1.7.min.js"></script>
+
+<style type='text/css' >
+	.deleteButton {
+		visibility:hidden;
+	}
+	
+	
+</style>
+
+
+	<style type='text/css' >
+		
+		
+	</style>
+
+
+Result Id: <input type='text' id='searchBox' /> <button value='Search' id='searchButton' >Search </button>
+
+</head>
+
+<body>
+
+  <div id="container">
+    <header>
+		<h2>GoCharts Web Engine </h2> <br /> <br />
+		
+		
+    </header>
+    <div id="main" role="main">
+		
+	<form method="POST" enctype="multipart/form-data" >
+		<table>
+    <tr><th><label for="annotationFile">Annotation File</label></th><td><input type="file" id="annotationFile" name="annotationFile"/></td></tr>
+    <tr><th><label for="ontologyFile">Ontology File</label></th><td><input type="file" id="ontologyFile" name="ontologyFile"/></td></tr>
+    <tr><th><label for="microarrayFile">Microarray file (Only csv files)</label></th><td><input type="file" id="microarrayFile" name="microarrayFile"/></td></tr>
+    <tr><th><label for="ignoreRows">Rows in microarray to ignore</label></th><td><input type="text" id="ignoreRows" name="ignoreRows"/></td></tr>
+    <tr><th><label for="ignoreCols">Cols in microarray to ignore</label></th><td><input type="text" id="ignoreCols" name="ignoreCols"/></td></tr>
+    <tr><th><label for="idCol">Column containing the Go term Id</label></th><td><input type="text" id="idCol" name="idCol"/></td></tr>
+    <tr><th><label for="evidenceCodes">Evidence Codes</label></th><td><select id="evidenceCodes" name="evidenceCodes">
+  <option selected="selected" value="all">all</option>
+  <option value="exp">exp</option>
+</select>
+</td></tr>
+    <tr><th><label for="jobName">Job Name (Optional)</label></th><td><input type="text" id="jobName" name="jobName"/></td></tr>
+    <tr><th><label for="description">Description</label></th><td><textarea id="description" name="description"></textarea></td></tr>
+    <tr><th><label for="email">Email (optional)</label></th><td><input type="text" id="email" name="email"/></td></tr>
+    <tr><th><label for="submit"></label></th><td><button type="submit" id="submit" name="submit">submit</button></td></tr>
+</table>
+	</form>
+
+    </div>
+    <footer>
+		<table>
+			<thead><tr>
+				<th>Id</th>
+				<th>Name</th>
+				<th>Description</th>
+				<th>Action</th>
+			</th></thead>
+			<tbody>
+			
+				<tr class='historyRow'>
+					<th><a href='/view/nso8kpq'> nso8kpq </a> </th>
+					<th>without nan</th>
+					<th></th>
+					<th<button id="nso8kpq" class='deleteButton' >Delete</button></th>
+				</tr>
+			
+				<tr class='historyRow'>
+					<th><a href='/view/bzvmx9d'> bzvmx9d </a> </th>
+					<th>birnbaum</th>
+					<th></th>
+					<th<button id="bzvmx9d" class='deleteButton' >Delete</button></th>
+				</tr>
+			
+			</tbody>
+		</table>
+    
+		
+	
+
+    </footer>
+  </div> <!--! end of #container -->
+
+
+  <!-- JavaScript at the bottom for fast page loading -->
+
+  <!-- Grab Google CDN's jQuery, with a protocol relative URL; fall back to local if necessary -->
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.js"></script>
+  <script>window.jQuery || document.write("<script src='/static/jquery-1.5.1.min.js'>\x3C/script>")</script>
+
+
+  <!-- scripts concatenated and minified via ant build script-->
+  <script src="/static/plugins.js"></script>
+  <script src="/static/script.js"></script>
+  <!-- end scripts-->
+
+
+<script type='text/javascript'>
+	$.ready(function(){
+		$('.historyRow').hover(function(){
+		
+		})
+	})
+	
+	var searchBox = document.getElementById("searchBox")
+	
+	$('#searchButton').click(function(){
+		document.location.href = '/view/' + searchBox.value;
+	})
+	
+	
+</script>
+
+  <!--[if lt IE 7 ]>
+    <script src="/static/dd_belatedpng.js"></script>
+    <script>DD_belatedPNG.fix("img, .png_bg"); // Fix any <img> or .png_bg bg-images. Also, please read goo.gl/mZiyb </script>
+  <![endif]-->
+
+</body>
+</html>
