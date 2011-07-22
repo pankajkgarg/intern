@@ -6,17 +6,20 @@ from web import form
 import goTree
 from jinja2 import Environment, PackageLoader
 from microarray import MicroArray
-import re, Queue, threading, string, random, os, sqlite3, json, time
+import re, Queue, threading, string, random, os, sqlite3, json, time, base64
 from pprint import pprint
 
 #render = web.template.render('templates/')
 env = Environment(loader=PackageLoader('__main__', 'templates'))
 
+allowed = (
+    ('admin','biology'),
+)
 
-print __name__
 
 urls = (
 	'/', 'home',
+	'/login', 'Login',
 	'/view/(?P<jobId>[^/]+)', 'view',
 	'/results/(?P<fileName>[^/]+)', 'results',
 	'/history', 'history',
@@ -159,6 +162,9 @@ def giveHistory(cursor, limit = 0):
 class home:
 	@db
 	def GET(self, cursor):
+		if web.ctx.env.get('HTTP_AUTHORIZATION') is None:
+			raise web.seeother('/login')
+
 		f = inputForm()
 		
 		formText = f.render()
@@ -211,6 +217,8 @@ class home:
 class view:
 	@db
 	def GET(self, jobId, cursor):
+		if web.ctx.env.get('HTTP_AUTHORIZATION') is None:
+			raise web.seeother('/login')
 		cursor.execute("select * from results where id = ?", (jobId, ))
 		info = dict(cursor.fetchone())
 		
@@ -222,6 +230,8 @@ class view:
 class history:
 	@db
 	def GET(self, cursor):
+		if web.ctx.env.get('HTTP_AUTHORIZATION') is None:
+			raise web.seeother('/login')
 		return env.get_template("base.html").render(history = giveHistory(cursor), allHistory = True)
 		
 class results:
@@ -246,7 +256,24 @@ class deleteRow:
 		pprint(data)
 		
 		cursor.execute('delete from results where id = ?', (id, ))	
-	
+
+class Login:
+	def GET(self):
+		auth = web.ctx.env.get('HTTP_AUTHORIZATION')
+		authreq = False
+		if auth is None:
+			authreq = True
+		else:
+			auth = re.sub('^Basic ','',auth)
+			username,password = base64.decodestring(auth).split(':')
+			if (username,password) in allowed:
+				raise web.seeother('/')
+			else:
+				authreq = True
+		if authreq:
+			web.header('WWW-Authenticate','Basic realm="Auth example"')
+			web.ctx.status = '401 Unauthorized'
+			return		
 	
 def randomId(idLen = 7):	
 	allChars = string.ascii_lowercase + "0123456789"
