@@ -17,7 +17,8 @@ svg {
 
 .visible {
 	visibility: visible;
-	%fill: SteelBlue;
+	fill: SteelBlue;
+	font-style: italic;
 	fill-opacity: 0.7;
 }
 .invisible {
@@ -34,6 +35,27 @@ Job Id:<h3 style="font-style:italic; display:inline;"> {{info.id}}</h3>
 {% endblock %}
 
 {% block afterFooter %}
+	<style>
+	#demo-frame > div.demo { padding: 10px !important; };
+	</style>
+	<script>
+	
+	</script>
+
+
+
+<div>
+
+<p>
+	<label for="amount">Zoom Level:</label>
+	<input type="text" id="amount" style="border:0; color:#f6931f; font-weight:bold;" />
+</p>
+
+<div id="slider"></div>
+
+</div>
+
+
     <div id="svgRoot" style='background-color:white; width: 1200px; margin: auto; padding-top: 20px; padding-bottom:50px;'>
     </div>
     <script type="text/javascript" src="{{info.dataFile}}"> </script>

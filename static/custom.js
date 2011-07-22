@@ -5,6 +5,7 @@ var settings = {
 	"padding" : [1, 1, 1, 1], // top right bottom left
 	"fontResize": false,
 	"circleResize": false,
+	"displayZoom": 0.9,
 };
 
 var xTemp,yTemp, zTemp;
@@ -165,9 +166,40 @@ svg.selectAll("text.zoomLabel")
 	.attr("class", function(d) { return "zoomLabel invisible level_" + String(d.zoom) })
 	.attr("x", function(d) { return x(d.x); })
 	.attr("y", function(d) { return y(d.y); })
-	.attr("font-size", function(d) { return (50 - (d.zoom*4)) > 14 ? (60 - (d.zoom*5)) : 14 ; })
+	.attr("font-size", function(d) { var tempFont = (50 - (d.zoom*6)); return (tempFont > 14) ? tempFont : 14 ; })
 	.attr("text-anchor", "middle")
 	.text(function(d){ return String(d.label); })
+
+lastValue = false
+function displayZoomLabels(level) {
+	$( "#amount" ).val( level);
+	if (level != lastValue){
+		if (lastValue != false){
+			d3.selectAll("text.visible").attr("class", "zoomLabel invisible level_" + String(lastValue) )
+		}
+		d3.selectAll("text.level_" + String(level)).attr("class", "zoomLabel visible")
+		lastValue = level
+	}
+}
+
+$(function() {
+	$( "#slider" ).slider({
+		value:1,
+		min: 1,
+		max: maxLevel,
+		step: 1,
+		slide: function( event, ui ) {
+			displayZoomLabels(ui.value);
+			
+			svg.selectAll("text.zoomLabel")
+				.attr("x", function(d) {  return x(d.x) + radiusFunc(d);})		
+				.attr("y", function(d) {return y(d.y) + radiusFunc(d) ; })		
+		}
+	});
+	$( "#amount" ).val( $( "#slider" ).slider( "value" ) );
+	
+});
+displayZoomLabels(1)
 
 var zoomScale = d3.scale.linear()
 	.domain([1.0, 3.0])
@@ -251,16 +283,18 @@ function redraw() {
 	
 	scale = Math.ceil(zoomScale(zoomLevel))
 	//console.log("Transformed scale ", scale)
-	if (scale != lastScale){
-		if (lastScale != false){
-			d3.selectAll("text.visible").attr("class", "zoomLabel invisible level_" + String(lastScale) )
-		}
-		d3.selectAll("text.level_" + String(scale)).attr("class", "zoomLabel visible")
-		lastScale = scale
-	}
+	
+	
+//	if (scale != lastScale){
+//		if (lastScale != false){
+//			d3.selectAll("text.visible").attr("class", "zoomLabel invisible level_" + String(lastScale) )
+//		}
+//		d3.selectAll("text.level_" + String(scale)).attr("class", "zoomLabel visible")
+//		lastScale = scale
+//	}
 	svg.selectAll("text.zoomLabel")
-		.attr("x", function(d) {  return x(d.x) + radiusFunc(d) ; })		//  + (x(d.z) * 0.001) + 2
-		.attr("y", function(d) {return y(d.y) + radiusFunc(d) ; })		//  + (0.5 * x(d.z) * 0.001)
+		.attr("x", function(d) {  return x(d.x) + radiusFunc(d) ; })		
+		.attr("y", function(d) {return y(d.y) + radiusFunc(d) ; })		
 	
 	
 	var allowedLabel = 80/zoomLevel
@@ -281,20 +315,11 @@ function redraw() {
 	svg.selectAll("text.label")
 		.attr("x", function(d) {  return x(d.x) + radiusFunc(d) ; })		//  + (x(d.z) * 0.001) + 2
 		.attr("y", function(d) {return y(d.y) - radiusFunc(d) - 5 ; })		//  + (0.5 * x(d.z) * 0.001)
-		.text(function(d) { return ((zoomLevel >= 1.2)? d.label : "") ;});  // ( (d.z >= allowedLabel)? String(d.z) : "" )
+		.text(function(d) { return ((zoomLevel >= settings.displayZoom)? d.label : "") ;});  
 	
 	if (settings.fontResize) { svg.selectAll("text.label").attr("font-size", function(d) { return s * 0.003; }); }
 	if (settings.circleResize) { svg.selectAll("circle").attr("r", function(d) { tempX =  s * d.score * 0.002;   return tempX;}) ; }
-	
-	if (zoomLevel ==1.5) {
-		svg.selectAll("text.label")//.transition().duration(750).delay(100).ease("linear")
-			.text(function(d) { return d.label; });
-	}
-	
-	// 
-	
-	//if (d3.event)  console.log(d3.event.scale);
+
 		
-		//.attr("transform", function(d, i) { tempX = x(d.x); tempY = y(d.y); return "translate(" + ( (tempX > 1) ? tempX :  "-200") + "," + ( (tempY < settings.height) ? tempY : "-200") + ")";  })
 }
 

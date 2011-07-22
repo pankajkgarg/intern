@@ -13,7 +13,7 @@ from collections import defaultdict
 def annotations(fileObj, evidenceCodes = []):
 	'''
 	Takes only 3 things from the annotation file, db_object_id and go_id, while evidence_code are used for filterDataing
-	Returns a dict mapping go_id to a set of db_object_id
+	Returns a dict mapping go_id to a set of db_object_id (gene ids)
 	
 	fileObj - file containing annotations, can be filename, or file object
 	evidenceCodes - the evidence codes to select, IF the list is left empty, then all are allowed
@@ -146,6 +146,34 @@ class GoTree:
 		self.associations = annotations(self.annotationFile, evidenceCodes)
 		self.tree = go.Tree.from_obo(ontologyFile)
 		
+		#Filter the tree based upon annotation
+#		modTerms = {}
+#		modAliases = {}
+#		for goId in self.associations.iterkeys():
+#			if goId in self.tree.terms:
+#				modTerms[goId] = self.tree.terms[goId]
+#			elif goId in self.tree.aliases:
+#				modAliases[goId] = self.tree.aliases[goId]
+#			else:
+#				print 'Not found'
+#				raise Exception
+#		
+#		allTerms = set(modTerms.iterkeys())
+#		allTerms.update(set(modAliases.iterkeys()))
+#		
+#		for termId in modTerms:
+#			if 'is_a' in modTerms[termId].tags:
+#				modTerms[termId].tags['is_a'] = [temp for temp in modTerms[termId].tags if temp.value in allTerms]
+		
+#		
+#		self.tree.terms = modTerms
+#		self.tree.aliases = modAliases
+				
+		#Making sure that the parent has the genes of the children
+		for goId,geneSet in self.associations.iteritems():
+			self.tree.ancestors
+		
+		
 		numProcessed = 0
 		self.terms = {}
 		for goId, geneSet in self.associations.iteritems():
@@ -174,8 +202,6 @@ class GoTree:
 			if len(modGenes) < 3:
 				#Probably no data found in the microarray for the 
 				#	corresponding set of genes
-				
-				print 'less genes', len(modGenes)
 				continue
 			
 			tempTerm = GoTerm(tempTerm, modGenes, self.totalGenes)
@@ -341,7 +367,8 @@ class GoTree:
 		for term, meanCorrelation in termsList[:200]:
 			modTerms.append(term)
 		return modTerms
-						
+	
+	resnickDebug = 0					
 	def resnick(self, terms):
 		'Terms - List of filtered go terms ( Instance of GoTerm )'
 		
@@ -355,25 +382,47 @@ class GoTree:
 		
 		ancestors = []
 		for i in xrange(lenTerms):
-			ancestors.append(self.tree.ancestors(terms[i].id))
+			tempSet = self.tree.ancestors(terms[i].id)
+			tempSet.remove(self.tree.ensure_term(terms[i].id))
+			ancestors.append(tempSet)
 			
 		for i in xrange(lenTerms):
-			for j in xrange(i+1):
+			for j in xrange(i):
 				common = ancestors[i].intersection(ancestors[j])
 				scores = []
 				for term in common:
-					scores.append( len(self.associations[term.id]) ) 
-				
+					scores.append( (term.id, len(self.associations[term.id])) ) 
+					#print 'Term: ', term.id, '\tScore:', len(self.associations[term.id])
+					
+					
 				if len(scores) != 0:
-					score = min(scores) # minimum because, lesser the number of genes, higher the Information Content
+					# minimum because, lesser the number of genes, 
+					# higher the Information Content
+					score = min(scores, key = operator.itemgetter(1)) 
+					if score[1] == 0:
+						print score
+					score = score[1]
 				else:
+					print 'NO common ancestors'
 					score = 0
+				
 					
 				if score == 0:
 					#TODO: Analyze this situation, how come the minimum score is 0
 					simMatrix[i][j] = simMatrix[j][i] = 0
+					#print common
+					self.resnickDebug += 1
+					print 'REsnick debug', self.resnickDebug
 				else:
 					simMatrix[i][j] = simMatrix[j][i] = -1 * math.log(float(score)/self.totalGenes)
+		
+		tempList = []
+		map(tempList.extend, simMatrix)
+		maxValue = max(tempList)
+		for i in xrange(lenTerms):
+			simMatrix[i][i] = (maxValue * 1.1)
+		
+		#print simMatrix
 				
 		return simMatrix
 		
@@ -414,7 +463,7 @@ class GoTree:
 		#Dividing data into 10 bins
 		binSize = (maxScore - minScore)/15.0
 		i = lastI = maxScore
-		while i >=  minScore:
+		while i >=  (minScore-binSize):
 			selectedIds = [ancestorId for ancestorId, score in ancestorScores if score > i]
 			
 			selectedSet = set(selectedIds)
@@ -464,8 +513,8 @@ class GoTree:
 				i = i + ((lastI - i)/2.0)
 				continue
 			elif set(finalSelection) != lastLabelSet:
-				if len(lastLabelSet) == len(finalSelection):
-					labels.pop()
+				#if len(lastLabelSet) == len(finalSelection):
+				#	labels.pop()
 				labels.append(finalSelection)
 				lastLabelSet = set(finalSelection)
 				
