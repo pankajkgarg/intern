@@ -60,7 +60,7 @@ def dbSetup():
 	
 
 vemail = form.regexp(r"^$|.*@.*", "must be a valid email address")
-vnums = form.regexp(r"[0-9]+\s*,?\s*", 'must be a list of comma separatad numbers e.g "2,7,12" ')
+vnums = form.regexp(r"[0-9]*\s*,?\s*", 'must be a list of comma separatad numbers e.g "2,7,12" ')
 vnum = form.regexp(r"[0-9]+", "must be a column number")
 
 vfile = form.regexp(r".+", "Required!")
@@ -99,13 +99,13 @@ def queueBased(jobQueue):
 		
 def process(kwargs):
 
-	if 'ignoreRows' in kwargs:
+	if 'ignoreRows' in kwargs and kwargs['ignoreRows'] != '':
 		kwargs['ignoreRows'] = re.sub(r'\s+', '', kwargs['ignoreRows']).split(',')
 		kwargs['ignoreRows'] = [int(temp) for temp in kwargs['ignoreRows']]
 	else:
 		kwargs['ignoreRows'] = []
 	
-	if 'ignoreCols' in kwargs:
+	if 'ignoreCols' in kwargs and kwargs['ignoreCols'] != '':
 		kwargs['ignoreCols'] = re.sub(r'\s+', '', kwargs['ignoreCols']).split(',')
 		kwargs['ignoreCols'] = [int(temp) for temp in kwargs['ignoreCols']]
 	else:

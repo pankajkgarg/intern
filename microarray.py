@@ -39,8 +39,9 @@ class MicroArray:
 		ignoreCols = set(ignoreCols)
 		ignoreRows = set(ignoreRows)
 		
-		
-		reader = csv.reader(fileObj)
+		dialect = csv.Sniffer().sniff(fileObj.read(1024))
+		fileObj.seek(0)
+		reader = csv.reader(fileObj, dialect)
 		
 		genes = {}
 		for i,row in enumerate(reader):
@@ -65,10 +66,10 @@ class MicroArray:
 				else:
 					if cell == '':
 						cell = '0'
-					values.append(int(cell))
+					values.append(float(cell))
 			
 			#Checking if the variance of the gene expression profile is zero, if it is so, then it is left out
-			if self.variance(values) == 0:
+			if len(values) == 0 or self.variance(values) == 0:
 				continue
 			
 			genes[tempId] = Gene(tempId, values)

@@ -35,6 +35,8 @@ def annotations(fileObj, evidenceCodes = []):
 			continue
 		
 		associations[temp.go_id].add(temp.db_object_symbol)		#IMPORTANT: change to db_object_id
+#		print temp.db_object_symbol, temp.go_id
+#	raise Exception
 	
 	return associations
 
@@ -151,7 +153,11 @@ class GoTree:
 			if numProcessed % 100 == 0:
 				print 'Num processed: ', numProcessed
 			
-			tempTerm = self.tree.ensure_term(goId)
+			try:
+				tempTerm = self.tree.ensure_term(goId)
+			except KeyError:
+				print 'KeyError: ', goId
+				continue
 			
 			if "namespace" not in tempTerm.tags:
 				continue
@@ -168,6 +174,8 @@ class GoTree:
 			if len(modGenes) < 3:
 				#Probably no data found in the microarray for the 
 				#	corresponding set of genes
+				
+				print 'less genes', len(modGenes)
 				continue
 			
 			tempTerm = GoTerm(tempTerm, modGenes, self.totalGenes)
