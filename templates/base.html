@@ -44,7 +44,10 @@
   <div id="container">
     <header>
     	
-		<div id="menu"> <a href="/"> Home </a> </div>
+		<div id="menu"> 
+			<a href="/"> Home </a> &nbsp;&nbsp;&nbsp;&nbsp; 
+			<a href="/history"> All History </a>
+		</div>
 		<div id="search">
 			Result Id: <input type="text" id="searchBox"> <button id="searchButton" value="Search">Search </button>
         </div>
@@ -59,7 +62,8 @@
     </div>
     <footer>
     <div id='footerContainer'>
-    	<h1> History </h1>
+    	<h1 style="display:inline;">{%if allHistory %}All {%else %} Recent {%endif %} History </h1>
+		<button type="button" id="deleteAll" style="float:right;margin-bottom: 10px;">Clear History</button>
 		<table id='mytable'>
 			<thead><tr>
 				<th scope='col'>Id</th>
@@ -69,11 +73,11 @@
 			</th></thead>
 			<tbody>
 			{% for row in history %}
-				<tr class='historyRow'>
+				<tr class='historyRow' id="{{row['id']}}" >
 					<th scope="row" class="{{ loop.cycle("spec", "specalt")}}"><a href='/view/{{row['id']}}'> {{ row['id'] }} </a> </th>
 					<td>{{ row['name'] }}</td>
 					<td>{{ row['description'] }}</td>
-					<td<button id="{{row['id']}}" class='deleteButton' >Delete</button></td>
+					<td><button id="button_{{row['id']}}" class='deleteButton' value="{{row['id']}}" >Delete</button></td>
 				</tr>
 			{% endfor %}
 			</tbody>
@@ -105,11 +109,41 @@
 
 
 <script type='text/javascript'>
-	$.ready(function(){
-		$('.historyRow').hover(function(){
-		
-		})
+	
+	$('.historyRow').mouseenter(function(obj){
+		$("#button_" + $(obj.currentTarget).attr("id")).css("visibility", "visible");
+	}).mouseleave(function(obj){
+		$("#button_" + $(obj.currentTarget).attr("id")).css("visibility", "hidden");
 	})
+	
+	$(".deleteButton").click(function(obj){
+		var button = $(obj.currentTarget);
+		var jobId = button.attr("value");
+		
+		if(button.text() == "Delete") {
+			button.text("Sure ?")
+		}else {
+			$.post( "/deleteRow/" + jobId, {}, function(){
+				$("#" + jobId).remove();
+			})
+		}	
+		
+	})
+	
+	$("#deleteAll").click(function(obj){
+		var button = $(obj.currentTarget);
+		
+		if(button.text() == "Clear History") {
+			button.text("Sure ?")
+		}else {
+			$.post( "/deleteAll", {}, function(){
+				$(".historyRow").remove();
+				button.text("Done")
+			})
+		}	
+		
+	})
+	
 	
 	var searchBox = document.getElementById("searchBox")
 	

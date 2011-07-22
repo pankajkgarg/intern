@@ -118,6 +118,7 @@ class GoTree:
 			annotationFile, 
 			microarray,
 			uid,
+			treeTypes = ["biological_process"],
 			name = 'results',
 			evidenceCodes = []
 		):
@@ -136,6 +137,7 @@ class GoTree:
 		self.ontologyFile = ontologyFile
 		self.annotationFile = annotationFile
 		self.microarray = microarray
+		self.treeTypes = set(treeTypes)
 		
 		self.totalGenes = microarray.numGenes
 		
@@ -150,6 +152,11 @@ class GoTree:
 				print 'Num processed: ', numProcessed
 			
 			tempTerm = self.tree.ensure_term(goId)
+			
+			if "namespace" not in tempTerm.tags:
+				continue
+			if tempTerm.tags["namespace"][0].value not in self.treeTypes:
+				continue
 			
 			modGenes = []
 			genes = list(geneSet)
@@ -299,7 +306,7 @@ class GoTree:
 					#Using one tailed pValue
 					pValue = pCalculator(modT, len(term.correlationList) + len(self.terms[parentId].correlationList) - 2)
 					
-					print tValue, pValue
+					#print tValue, pValue
 					
 					if math.isnan(pValue):
 						#TODO: WHY is this happening.. why am I getting nan values

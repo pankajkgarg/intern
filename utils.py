@@ -84,15 +84,7 @@ def pCalculator(tValue,  df):
 	pValue += 4*tempSum
 	
 	pValue = (h/3.0) * pValue
-	
-	if math.isnan(pValue) :
-		totalNan += 1
-		if math.isnan(dfParam(df)):
-			dfReason += 1
-		if dfReason%10 == 0:
-			print "Num bcs of df: ", dfReason, "out of ", totalNan
-			pprint(memoize)
-	
+		
 	return pValue	#only gives the one sided p value
 	
 	#Integration by a method which assumes the function to be constant

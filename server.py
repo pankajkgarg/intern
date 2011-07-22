@@ -19,6 +19,9 @@ urls = (
 	'/', 'home',
 	'/view/(?P<jobId>[^/]+)', 'view',
 	'/results/(?P<fileName>[^/]+)', 'results',
+	'/history', 'history',
+	'/deleteAll', "clearHistory",
+	'/deleteRow/(?P<id>[^/]+)', 'deleteRow',
 )
 
 web.config.debug = True
@@ -37,8 +40,6 @@ def db(func):
 		conn = dbConn()
 		cursor = conn.cursor()
 		kwargs["cursor"] = cursor
-		print args
-		print kwargs
 		result = func(*args, **kwargs)
 		conn.commit()
 		cursor.close()
@@ -63,12 +64,17 @@ vfile = form.regexp(r".+", "Required!")
 
 inputForm = form.Form(
 	form.File("annotationFile", vfile, description = 'Annotation File'),
-	form.File('ontologyFile', vfile, description = 'Ontology File'),
+	#form.File('ontologyFile', vfile, description = 'Ontology File'),
 	
 	form.File('microarrayFile', vfile, description = 'Microarray file (Only csv files)'),
 	form.Textbox("ignoreRows", vnums, description = "Rows in microarray to ignore"),
 	form.Textbox("ignoreCols", vnums, description = "Cols in microarray to ignore"),
 	form.Textbox("idCol", vnum, description = "Column containing the Go term Id"),
+	
+	# form.Checkbox("treeTypes", value="biological_process", description="biological process", checked=True),
+	# form.Checkbox("treeTypes", description="molecular function", value="molecular_function"),
+	# form.Checkbox("treeTypes", description="cellular component", value="cellular_component"),
+	form.Dropdown("treeTypes", args=["biological_process", "molecular_function", "cellular _component"], value="biological_process", description="Tree type"),
 	
 	form.Dropdown("evidenceCodes", args=["all", "exp"], value="all", description="Evidence Codes"),
 	
@@ -114,10 +120,10 @@ def process(kwargs):
 	#Shall do the processing and shall save the results in 'results' directory 
 	#	with the filename  "kwargs['name']" + ".js"
 
-	temp = goTree.GoTree(kwargs['ontologyFile'], kwargs['annotationFile'], microarray, uid = kwargs['jobId'], name = kwargs['jobName'], evidenceCodes = kwargs['evidenceCodes'])
+	temp = goTree.GoTree(kwargs['ontologyFile'], kwargs['annotationFile'], microarray, treeTypes = [kwargs["treeTypes"]], uid = kwargs['jobId'], name = kwargs['jobName'], evidenceCodes = kwargs['evidenceCodes'])
 	
 	
-	os.remove(kwargs['ontologyFile'])
+	#os.remove(kwargs['ontologyFile'])
 	os.remove(kwargs['annotationFile'])
 	os.remove(kwargs['microarrayFile'])
 	
@@ -133,15 +139,19 @@ def process(kwargs):
 		email(**kwargs)
 
 
-def giveHistory(cursor):
-	results = cursor.execute('select * from results order by timestamp desc')
+def giveHistory(cursor, limit = 0):
+	if limit != 0:
+		limitString = " limit " + str(limit)
+	else:
+		limitString = ""
+	results = cursor.execute('select * from results order by timestamp desc '+ limitString)
 	results = cursor.fetchall()
 	
 	modResult = []
 	for row in results:
 		modResult.append(dict(row))
 	
-	pprint(modResult)
+	#pprint(modResult)
 	
 	return modResult
 		
@@ -152,15 +162,17 @@ class home:
 		f = inputForm()
 		
 		formText = f.render()
-		return env.get_template("home.html").render(form = formText, history = giveHistory(cursor))
+		return env.get_template("home.html").render(form = formText, history = giveHistory(cursor, 5))
 		#return render.register(f)
 		
-		
-	def POST(self):
+	@db	
+	def POST(self, cursor):
+		#print type(web.data())
+		#pprint(web.data())
 		f = inputForm()
 		if not f.validates():
 			formText = f.render()
-			return env.get_template("home.html").render(form = formText, )
+			return env.get_template("home.html").render(form = formText, history=giveHistory(cursor, 5))
 		else:
 			dataDict = dict(f.value)
 			dataDict["jobId"] = randomId()
@@ -169,11 +181,13 @@ class home:
 			#Post data contains file content
 			# The following code writes that data into a local file and replaces 
 			# the dictionary value by filename
-			ontologyPath = os.path.join("data", dataDict["jobId"] + "_ontology.obo")
-			f = open(ontologyPath, "wb")
-			f.write(dataDict["ontologyFile"])
-			f.close()
-			dataDict["ontologyFile"] = ontologyPath
+			
+			# ontologyPath = os.path.join("data", dataDict["jobId"] + "_ontology.obo")
+			# f = open(ontologyPath, "wb")
+			# f.write(dataDict["ontologyFile"])
+			# f.close()
+			
+			dataDict["ontologyFile"] = os.path.join("data", "gene_ontology.obo")
 			
 			annotationPath = os.path.join("data", dataDict["jobId"] + "_annotations.txt")
 			f = open(annotationPath, "wb")
@@ -191,7 +205,7 @@ class home:
 			 
 			#jobQueue.put(dataDict)
 			process(dataDict)
-			raise web.seeother('/')
+			raise web.seeother('/view/' + dataDict["jobId"])
 
 
 class view:
@@ -200,11 +214,16 @@ class view:
 		cursor.execute("select * from results where id = ?", (jobId, ))
 		info = dict(cursor.fetchone())
 		
-		info['dataFile'] = os.path.join('results', info['id'] + '_data.js')
-		info['zoomLabelsFile'] = os.path.join('results', info['id'] + '_zoomLabels.js')
+		info['dataFile'] = '/results/' +  info['id'] + '_data.js'
+		info['zoomLabelsFile'] = '/results/' + info['id'] + '_zoomLabels.js'
 		
-		return env.get_template("view.html").render(info = info, history = giveHistory(cursor))
+		return env.get_template("view.html").render(info = info, history = giveHistory(cursor, 5))
 
+class history:
+	@db
+	def GET(self, cursor):
+		return env.get_template("base.html").render(history = giveHistory(cursor), allHistory = True)
+		
 class results:
 	def GET(self, fileName):
 		f = open(os.path.join("results", fileName))
@@ -221,12 +240,12 @@ class clearHistory:
 		
 class deleteRow:
 	@db
-	def POST(self, cursor):
+	def POST(self, id, cursor):
 		data = web.data()
 		print 'Data given to delete'
 		pprint(data)
 		
-		cursor.execute('delete from results where id = ?', (data, ))	
+		cursor.execute('delete from results where id = ?', (id, ))	
 	
 	
 def randomId(idLen = 7):	

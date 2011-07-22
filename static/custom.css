@@ -83,7 +83,7 @@ th {
 	border-bottom: 1px solid #C1DAD7;
 	border-top: 1px solid #C1DAD7;
 	letter-spacing: 2px;
-	text-transform: uppercase;
+	text-transform: capitalize;
 	text-align: left;
 	padding: 6px 6px 6px 12px;
 	background: #CAE8EA url(/static/bg_header.jpg) no-repeat;
