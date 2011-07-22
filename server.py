@@ -77,7 +77,7 @@ inputForm = form.Form(
 	# form.Checkbox("treeTypes", value="biological_process", description="biological process", checked=True),
 	# form.Checkbox("treeTypes", description="molecular function", value="molecular_function"),
 	# form.Checkbox("treeTypes", description="cellular component", value="cellular_component"),
-	form.Dropdown("treeTypes", args=["biological_process", "molecular_function", "cellular _component"], value="biological_process", description="Tree type"),
+	form.Dropdown("treeTypes", args=["biological_process", "molecular_function", "cellular_component"], value="biological_process", description="Tree type"),
 	
 	form.Dropdown("evidenceCodes", args=["all", "exp"], value="all", description="Evidence Codes"),
 	

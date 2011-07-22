@@ -61,8 +61,6 @@ class MDS:
 				matrix[i][j] = matrix[j][i] = pow(pow((self.X[i][0] - self.X[j][0]), 2) + pow((self.X[i][1] - self.X[j][1]), 2) , 0.5)
 				
 				#matrix[i][j] = matrix[j][i] = sum((self.X[i][k] - self.X[j][k]) ** 2 for k in xrange(self.numDims)) ** 0.5
-# A factor of 1000 included in the distance across x axis
-				#matrix[i][j] = matrix[j][i] = ( (1000 * ((self.X[i][0] - self.X[j][0]) ** 2 )) + ((self.X[i][1] - self.X[j][1]) ** 2 ) )** 0.5
 				
 		self.distanceMatrix = matrix
 	
@@ -144,7 +142,7 @@ class MDS:
 			if j%4 == 0 and j!= 0:
 				oldStress = stress
 				stress = self.stress()
-				if (oldStress - stress) < 0.1:
+				if (oldStress - stress) < 0.5:
 					break
 			
 			if j%20 == 0:
@@ -182,11 +180,11 @@ def test():
 	#disMatrix = [[0,2,3], [2,0,1], [3,1,0]]
 	#disMatrix = [[0,5], [5,0]]
 	
-	disMatrix = geneData()
+	disMatrix = irisData()
 	#pprint(disMatrix)
 	
 	mds	= MDS(disMatrix)
-	mds.process()
+	mds.process(plot=True)
 
 def irisData():
 	'Shall return the iris data as dissimalarity matrix'

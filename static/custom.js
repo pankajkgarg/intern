@@ -5,7 +5,7 @@ var settings = {
 	"padding" : [1, 1, 1, 1], // top right bottom left
 	"fontResize": false,
 	"circleResize": false,
-	"displayZoom": 0.9,
+	"displayZoom": 1.6,
 };
 
 var xTemp,yTemp, zTemp;
@@ -136,7 +136,7 @@ svg.selectAll("text")
 		.attr("x", function(d) { return x(d.x); }) 	//  + (x(d.z) * 0.001)
 		.attr("y", function(d) { return y(d.y); })
 		.attr("text-anchor", "middle")
-		.text(function(d) { return String(d.label);});
+		//.text(function(d) { return String(d.label);});
 
 
 var selectedLevel = 3;
@@ -157,7 +157,9 @@ for(var level in zoomLabels){
 		labels[i]["r"] = 20000/level;
 		allLabels.push(labels[i])
 	}
-	if (level > maxLevel) maxLevel = level
+	if (Number(level) > Number(maxLevel)) {	
+		maxLevel = Number(level)
+	}
 }
 
 svg.selectAll("text.zoomLabel")
