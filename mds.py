@@ -126,7 +126,7 @@ class MDS:
 			p, = plt.plot(xData, yData, 'o')
 		
 		stress, oldStress = 0, 0
-		for j in xrange(1000):	#Putting maximum 1000 iterations
+		for j in xrange(400):	#Putting maximum 400 iterations
 			self.iteration()
 
 			if plot and j%20 == 0 and j!= 0:
@@ -139,10 +139,12 @@ class MDS:
 			
 			if j == 0:
 				stress = self.stress()
+			elif j == 1:
+				firstDiff = oldStress - stress
 			if j%4 == 0 and j!= 0:
 				oldStress = stress
 				stress = self.stress()
-				if (oldStress - stress) < 0.5:
+				if (oldStress - stress) < (0.005 * firstDiff):
 					break
 			
 			if j%20 == 0:

@@ -185,6 +185,13 @@ class GoTree:
 		modAssociations = defaultdict(set)
 		for goId,geneSet in self.associations.iteritems():
 			modAssociations[goId] = geneSet
+			
+			try:
+				tempTerm = self.tree.ensure_term(goId)
+			except KeyError:
+				print 'KeyError: ', goId
+				continue
+			
 			ancestorSet = list(self.tree.ancestors(goId))
 			for tempTerm in ancestorSet:
 				modAssociations[tempTerm.id].update(geneSet)
@@ -239,7 +246,7 @@ class GoTree:
 		simMatrix = self.resnick(modTerms)
 		
 		#Converting into dissimilarity matrix
-		disMatrix = self.sim2dis(simMatrix)
+		disMatrix = (simMatrix)
 		
 		#Doing mds
 		mdsInstance = mds.MDS(disMatrix)
@@ -458,13 +465,13 @@ class GoTree:
 					self.resnickDebug += 1
 					print 'REsnick debug', self.resnickDebug
 				else:
-					simMatrix[i][j] = simMatrix[j][i] = -1 * math.log(float(score)/self.totalGenes)
+					simMatrix[i][j] = simMatrix[j][i] = ( 2 * math.log(float(score)/self.totalGenes)) - math.log(len(self.associations[terms[i].id])/float(self.totalGenes)) - math.log(len(self.associations[terms[j].id])/float(self.totalGenes))
 		
 		tempList = []
 		map(tempList.extend, simMatrix)
 		maxValue = max(tempList)
 		for i in xrange(lenTerms):
-			simMatrix[i][i] = (maxValue * 1.1)
+			simMatrix[i][i] = 0#(maxValue * 1.1)
 		
 		#print simMatrix
 				

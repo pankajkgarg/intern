@@ -4,28 +4,7 @@
 	<script type="text/javascript" src="/static/d3.js"></script>
 	<script type="text/javascript" src="/static/d3.behavior.js"></script>
 	
-    <style type="text/css">
 
-svg {
-  font: 10px sans-serif;
-  stroke-width: 1.5;
-}
-.label {
-    font-size: 11px;
-    fill-opacity: 0.7;
-}
-
-.visible {
-	visibility: visible;
-	fill: DarkBlue;
-	font-style: italic;
-	fill-opacity: 0.7;
-}
-.invisible {
-	visibility: hidden;
-}
-
-    </style>
     
 {% endblock %}
     
@@ -44,7 +23,7 @@ Job Id:<h3 style="font-style:italic; display:inline;"> {{info.id}}</h3>
 
 
 
-<div>
+<div id='sliderContainer'>
 
 <p>
 	<label for="amount">Zoom Level:</label>

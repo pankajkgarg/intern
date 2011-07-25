@@ -7,6 +7,7 @@ from web import form
 import goTree
 from jinja2 import Environment, PackageLoader
 from microarray import MicroArray
+from fetch import fetch
 import re, Queue, threading, string, random, os, sqlite3, json, time, base64
 from pprint import pprint
 
@@ -21,8 +22,8 @@ allowed = (
 urls = (
 	'/', 'home',
 	'/login', 'Login',
-	'/view/(?P<jobId>[^/]+)', 'view',
-	'/downloadView/(?P<jobId>[^/]+)', 'downloadView',
+	'/view/(?P<jobId>[^/]+)', 'downloadView',
+	#'/downloadView/(?P<jobId>[^/]+)', 'downloadView',
 	'/results/(?P<fileName>[^/]+)', 'results',
 	'/history', 'history',
 	'/deleteAll', "clearHistory",
@@ -59,7 +60,7 @@ def dbSetup():
 	cursor.execute('create table if not exists results (id text, name text, description text, timestamp int)')
 	conn.commit()
 	cursor.close()
-	
+
 
 vemail = form.regexp(r"^$|.*@.*", "must be a valid email address")
 vnums = form.regexp(r"[0-9]*\s*,?\s*", 'must be a list of comma separatad numbers e.g "2,7,12" ')
@@ -181,6 +182,19 @@ class home:
 	def POST(self, cursor):
 		#print type(web.data())
 		#pprint(web.data())
+		inputData = web.input(annotationFile = {}, ontologyFile = {})
+		
+		if inputData.annotationFile != {} and inputData.annotationFile.filename[-3:] == '.gz':
+			annotationAdd = '.gz'
+		else:
+			annotationAdd = ''
+		
+		if inputData.ontologyFile != {} and inputData.ontologyFile.filename[-3:] == '.gz':
+			ontologyAdd = '.gz'
+		else:
+			ontologyAdd = ''
+		
+		
 		f = inputForm()
 		if not f.validates():
 			formText = f.render()
@@ -201,7 +215,7 @@ class home:
 			
 			dataDict["ontologyFile"] = os.path.join("data", "gene_ontology.obo")
 			
-			annotationPath = os.path.join("data", dataDict["jobId"] + "_annotations.txt")
+			annotationPath = os.path.join("data", dataDict["jobId"] + "_annotations.txt" + annotationAdd)
 			f = open(annotationPath, "wb")
 			f.write(dataDict["annotationFile"])
 			f.close()
@@ -254,7 +268,7 @@ class downloadView:
 				cssFile = re.search(r"href\s*=\s*[\"\']/?(.+?)[\"\'].*?>", link)
 				if cssFile is not None:
 					cssFile = cssFile.group(1)
-					print cssFile
+					#print cssFile
 					f = open(cssFile, "rb")
 					cssText = f.read()
 					f.close()
@@ -263,7 +277,7 @@ class downloadView:
 				
 				tempText += cssText + "</style>"
 				tempText = tempText.decode("utf-8")
-				print link
+				#print link
 				text = text.replace(link, tempText)
 			
 			jsLinks = re.findall(r"(?i)<script.+?src\s*=\s*[\"\'].+?[\"\'].*?>\s*</script>", text)
@@ -274,7 +288,7 @@ class downloadView:
 				jsFile = re.search(r"src\s*=\s*[\"\']/?(.+?)[\"\']", link)
 				if jsFile is not None:
 					jsFile = jsFile.group(1)
-					print jsFile
+					#print jsFile
 					f = open(jsFile, "rb")
 					jsText = f.read()
 					f.close()
@@ -283,7 +297,7 @@ class downloadView:
 				
 				tempText += jsText + "</script>"
 				tempText = tempText.decode("utf-8")
-				print link
+				#print link
 				text = text.replace(link, tempText)
 				
 			return text

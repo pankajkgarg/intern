@@ -67,11 +67,11 @@ stroke = function(d) { return d ? "#ccc" : "#666"; };
 //color range
 var color = d3.scale.linear()
 	.domain([minScore, maxScore])
-	.range(["lightblue", "crimson"]);
+	.range(["white", "darkblue"]);
 	
 var sizeScale = d3.scale.log()
 	.domain([minGenes, maxGenes])
-	.range([5,15]);
+	.range([3,12]);
 	
 //color = d3.scale.category10();
 var symbol = d3.scale.ordinal().range(d3.svg.symbolTypes);
@@ -125,14 +125,6 @@ svg.selectAll("text")
 		//.text(function(d) { return String(d.label);});
 
 
-var selectedLevel = 3;
-var selectedLabels = [];
-var labels = zoomLabels[selectedLevel]
-for (var i = 0; i < labels.length; i++){
-	labels[i]["zoom"] = selectedLevel;
-	labels[i]["r"] = 20000/selectedLevel;
-	selectedLabels.push(labels[i])
-}
 
 maxLevel = 0
 var allLabels = [];
@@ -148,15 +140,26 @@ for(var level in zoomLabels){
 	}
 }
 
+var maxLabelScore = 0, minLabelScore = 100000;
+for (var i = 0; i < allLabels.length; i++){
+	if (allLabels[i].score > maxLabelScore)  maxLabelScore = allLabels[i].score
+	if (allLabels[i].score < minLabelScore)  minLabelScore = allLabels[i].score
+}
+var labelSize = d3.scale.linear()
+	.domain([minLabelScore, maxLabelScore])
+	.range([14, 45])
+
 svg.selectAll("text.zoomLabel")
 	.data(allLabels)
 	.enter().append("svg:text")
 	.attr("class", function(d) { return "zoomLabel invisible level_" + String(d.zoom) })
 	.attr("x", function(d) { return x(d.x); })
 	.attr("y", function(d) { return y(d.y); })
-	.attr("font-size", function(d) { var tempFont = (50 - (d.zoom*6)); return (tempFont > 14) ? tempFont : 14 ; })
+	.attr("font-size", function(d) { return labelSize(d.score);  })
 	.attr("text-anchor", "middle")
 	.text(function(d){ return String(d.label); })
+
+
 
 lastValue = false
 function displayZoomLabels(level) {
@@ -268,8 +271,8 @@ function redraw() {
 		scale = 1;
 	}
 	
-	
 	scale = Math.ceil(zoomScale(zoomLevel))
+	displayZoomLabels(scale)
 	//console.log("Transformed scale ", scale)
 	
 	

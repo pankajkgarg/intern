@@ -76,6 +76,35 @@ textarea {
   margin: 0px;
 }
 
+
+svg {
+  font: 10px sans-serif;
+  stroke-width: 1.5;
+}
+.label {
+    font-size: 11px;
+    fill-opacity: 0.7;
+}
+
+#sliderContainer {
+    width: 700px;
+    margin: auto;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+.visible {
+	visibility: visible;
+	fill: crimson;
+	font-style: italic;
+	fill-opacity: 0.7;
+}
+.invisible {
+	visibility: hidden;
+}
+
+
+
 th {
 	font: bold 11px "Trebuchet MS", Verdana, Arial, Helvetica, sans-serif;
 	color: #4f6b72;
