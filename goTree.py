@@ -16,7 +16,7 @@ def annotations(fileObj, evidenceCodes = []):
 	Returns a dict mapping go_id to a set of db_object_id (gene ids)
 	
 	fileObj - file containing annotations, can be filename, or file object
-	evidenceCodes - the evidence codes to select, IF the list is left empty, then all are allowed
+	evidenceCodes - the evidence codes to ignore
 	'''
 	
 	ann = go.AnnotationFile(fileObj)
@@ -31,7 +31,7 @@ def annotations(fileObj, evidenceCodes = []):
 	associations = defaultdict(set)	# Maps go_id to a set of genes id
 	for temp in ann:
 		#filterDataing based on evidence codes
-		if filterData  and temp.evidence_code not in evidenceCodes:
+		if filterData  and temp.evidence_code in evidenceCodes:
 			continue
 		
 		associations[temp.go_id].add(temp.db_object_symbol)		#IMPORTANT: change to db_object_id
@@ -260,7 +260,6 @@ class GoTree:
 	
 	def sim2dis(self, matrix):
 		"Given a similarity matrix, converts it to dissimilarity matrix"
-		return matrix
 		size = len(matrix)
 		disMatrix = [[0 for _ in xrange(size)] for _ in xrange(size)]
 		
@@ -270,7 +269,7 @@ class GoTree:
 		
 		for i in xrange(size):
 			for j in xrange(i):
-				disMatrix[i][j] = disMatrix[j][i] = 1 - (matrix[i][j]/maxValue)
+				disMatrix[i][j] = disMatrix[j][i] = maxValue - matrix[i][j]#1 - (matrix[i][j]/maxValue)
 		return disMatrix
 		
 		
@@ -284,6 +283,7 @@ class GoTree:
 				"goId": term.id,
 				"label": term.name,
 				"score": term.meanCorrelation,
+				"numGenes": term.numGenes,
 			})
 		
 		f = open( os.path.join('results', self.uid + '_data.js') , "wb")
@@ -458,13 +458,13 @@ class GoTree:
 					self.resnickDebug += 1
 					print 'REsnick debug', self.resnickDebug
 				else:
-					simMatrix[i][j] = simMatrix[j][i] = ( 2 * math.log(float(score)/self.totalGenes)) - math.log(len(self.associations[terms[i].id])/float(self.totalGenes)) - math.log(len(self.associations[terms[j].id])/float(self.totalGenes))
+					simMatrix[i][j] = simMatrix[j][i] = -1 * math.log(float(score)/self.totalGenes)
 		
 		tempList = []
 		map(tempList.extend, simMatrix)
 		maxValue = max(tempList)
 		for i in xrange(lenTerms):
-			simMatrix[i][i] = 0#(maxValue * 1.1)
+			simMatrix[i][i] = (maxValue * 1.1)
 		
 		#print simMatrix
 				

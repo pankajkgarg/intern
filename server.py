@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #from pprint import pprint
 #pprint(globals())
 	
@@ -21,6 +22,7 @@ urls = (
 	'/', 'home',
 	'/login', 'Login',
 	'/view/(?P<jobId>[^/]+)', 'view',
+	'/downloadView/(?P<jobId>[^/]+)', 'downloadView',
 	'/results/(?P<fileName>[^/]+)', 'results',
 	'/history', 'history',
 	'/deleteAll', "clearHistory",
@@ -61,6 +63,7 @@ def dbSetup():
 
 vemail = form.regexp(r"^$|.*@.*", "must be a valid email address")
 vnums = form.regexp(r"[0-9]*\s*,?\s*", 'must be a list of comma separatad numbers e.g "2,7,12" ')
+vchars = form.regexp(r"[^,]*\s*,?\s*", 'must be a list of comma separatad evidence codes e.g "exp,abc" ')
 vnum = form.regexp(r"[0-9]+", "must be a column number")
 
 vfile = form.regexp(r".+", "Required!")
@@ -72,14 +75,15 @@ inputForm = form.Form(
 	form.File('microarrayFile', vfile, description = 'Microarray file (Only csv files)'),
 	form.Textbox("ignoreRows", vnums, description = "Rows in microarray to ignore"),
 	form.Textbox("ignoreCols", vnums, description = "Cols in microarray to ignore"),
-	form.Textbox("idCol", vnum, description = "Column containing the Go term Id"),
+	form.Textbox("idCol", vnum, description = "Column containing the Gene Id"),
 	
 	# form.Checkbox("treeTypes", value="biological_process", description="biological process", checked=True),
 	# form.Checkbox("treeTypes", description="molecular function", value="molecular_function"),
 	# form.Checkbox("treeTypes", description="cellular component", value="cellular_component"),
 	form.Dropdown("treeTypes", args=["biological_process", "molecular_function", "cellular_component"], value="biological_process", description="Tree type"),
 	
-	form.Dropdown("evidenceCodes", args=["all", "exp"], value="all", description="Evidence Codes"),
+	#form.Dropdown("evidenceCodes", args=["all", "exp"], value="all", description="Evidence Codes"),
+	form.Textbox("evidenceCodes", vchars, description= "Evidence codes to ignore"),
 	
 	form.Textbox("jobName", description = "Job Name (Optional)"),
 	form.Textarea("description", description="Description"),
@@ -110,13 +114,15 @@ def process(kwargs):
 		kwargs['ignoreCols'] = [int(temp) for temp in kwargs['ignoreCols']]
 	else:
 		kwargs['ignoreCols'] = []
+	
 
 	if 'idCol' in kwargs:
 		kwargs['idCol'] = int(kwargs['idCol'])
 		
-	if 'evidenceCodes' in kwargs:
-		if kwargs['evidenceCodes'] == 'all':
-			kwargs['evidenceCodes'] = []
+	if 'evidenceCodes' in kwargs and kwargs['evidenceCodes'] != '':
+		kwargs['evidenceCodes'] = re.sub(r'\s+', '', kwargs['evidenceCodes']).split(',')
+	else:
+		kwargs['evidenceCodes'] = []
 	
 	microarray = MicroArray(kwargs['microarrayFile'], idCol = kwargs['idCol'], ignoreRows = kwargs['ignoreRows'], ignoreCols = kwargs['ignoreCols'] )
 
@@ -216,7 +222,7 @@ class home:
 
 class view:
 	@db
-	def GET(self, jobId, cursor):
+	def GET(self, jobId, cursor, withHistory = True):
 		if web.ctx.env.get('HTTP_AUTHORIZATION') is None:
 			raise web.seeother('/login')
 		cursor.execute("select * from results where id = ?", (jobId, ))
@@ -225,7 +231,66 @@ class view:
 		info['dataFile'] = '/results/' +  info['id'] + '_data.js'
 		info['zoomLabelsFile'] = '/results/' + info['id'] + '_zoomLabels.js'
 		
-		return env.get_template("view.html").render(info = info, history = giveHistory(cursor, 5))
+		if withHistory:
+			history = giveHistory(cursor, 5)
+		else:
+			history = []
+		
+		return env.get_template("view.html").render(info = info, history = history)
+
+class downloadView:
+	@db
+	def GET(self, jobId, cursor):
+		temp = view()
+		
+		text = temp.GET(jobId, withHistory = False)
+		
+		def substitute(text):
+			cssLinks = re.findall(r"(?i)<link.+?rel\s*=\s*[\"\']stylesheet[\"\'].+?href\s*=\s*[\"\'].+?[\"\'].*?>", text)
+			
+			for link in cssLinks:
+				tempText = "<style type='text/css'>"
+				
+				cssFile = re.search(r"href\s*=\s*[\"\']/?(.+?)[\"\'].*?>", link)
+				if cssFile is not None:
+					cssFile = cssFile.group(1)
+					print cssFile
+					f = open(cssFile, "rb")
+					cssText = f.read()
+					f.close()
+				else:
+					cssText = ""
+				
+				tempText += cssText + "</style>"
+				tempText = tempText.decode("utf-8")
+				print link
+				text = text.replace(link, tempText)
+			
+			jsLinks = re.findall(r"(?i)<script.+?src\s*=\s*[\"\'].+?[\"\'].*?>\s*</script>", text)
+			
+			for link in jsLinks:
+				tempText = "<script type='text/javascript'>"
+				
+				jsFile = re.search(r"src\s*=\s*[\"\']/?(.+?)[\"\']", link)
+				if jsFile is not None:
+					jsFile = jsFile.group(1)
+					print jsFile
+					f = open(jsFile, "rb")
+					jsText = f.read()
+					f.close()
+				else:
+					jsText = ""
+				
+				tempText += jsText + "</script>"
+				tempText = tempText.decode("utf-8")
+				print link
+				text = text.replace(link, tempText)
+				
+			return text
+			
+		return substitute(text)
+		
+		
 
 class history:
 	@db

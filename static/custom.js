@@ -5,20 +5,10 @@ var settings = {
 	"padding" : [1, 1, 1, 1], // top right bottom left
 	"fontResize": false,
 	"circleResize": false,
-	"displayZoom": 1.6,
+	"displayZoom": 1.8,
 };
 
 var xTemp,yTemp, zTemp;
-/*
-var data = new Array();
-for(var i = 0; i < 400; i++) {
-	xTemp = (Math.random() * 10) - 5;
-	yTemp = (Math.random() * 10) - 5;
-	zTemp = Math.floor(Math.random() * 100);
-	data.push({"x": xTemp, "y": yTemp, "z": zTemp});
-}
-*/
-
 
 
 //preprocessing data
@@ -30,11 +20,18 @@ for(var i = 0; i < data.length; i++) {
 
 //Finding max and min value of x and y
 var minX = 10000, minY = 10000, maxX = -100000, maxY = -100000;
+var minGenes = 100000, maxGenes = 0;
+var minScore = 10000, maxScore = -10000;
 for(var i = 0; i < data.length; i++) {
 	if (data[i].x > maxX) { maxX = data[i].x };
 	if (data[i].x < minX) { minX = data[i].x };
 	if (data[i].y > maxY) maxY = data[i].y;
 	if (data[i].y < minY) minY = data[i].y;
+	
+	if (data[i].score > maxScore) maxScore = data[i].score;
+	if (data[i].score < minScore) minScore = data[i].score;
+	if (data[i].numGenes > maxGenes) maxGenes = data[i].numGenes;
+	if (data[i].numGenes < minGenes) minGenes = data[i].numGenes;
 }
 
 
@@ -68,11 +65,15 @@ stroke = function(d) { return d ? "#ccc" : "#666"; };
 		
 
 //color range
-var color = d3.scale.log()
-	.domain([1,100])
-	.range(["yellow", "orange"]);
-
-color = d3.scale.category10();
+var color = d3.scale.linear()
+	.domain([minScore, maxScore])
+	.range(["lightblue", "crimson"]);
+	
+var sizeScale = d3.scale.log()
+	.domain([minGenes, maxGenes])
+	.range([5,15]);
+	
+//color = d3.scale.category10();
 var symbol = d3.scale.ordinal().range(d3.svg.symbolTypes);
 
 var baseSVG = d3.select("#svgRoot")
@@ -82,23 +83,8 @@ var baseSVG = d3.select("#svgRoot")
 		.call(d3.behavior.zoom()
 		.on("zoom", redraw))
 
-	
-  
-//invisible rectangle left  
-// tempSVG = baseSVG.append("svg:g")
-		// .attr("render-order", 5);
-	// tempSVG.append("svg:rect")
-		// .attr("width", settings.padding[3])
-		// .attr("height", settings.height)
-		// .attr("fill", "white")
-		// .attr("stroke", "none")
-	// tempSVG.append("svg:rect")	//invisible rectangle bottom
-		// .attr("width", settings.width)
-		// .attr("height", settings.padding[2])
-		// .attr("fill", "white")
-		// .attr("stroke", "none");
 
-
+		
 frameworkSVG = baseSVG.append("svg:g")
 		.attr("render-order", 10)
 		.attr("transform", "translate(" + settings.padding[3] + "," + settings.padding[0] + ")")
@@ -114,8 +100,8 @@ svg = baseSVG.append("svg:g")
 		.attr("transform", "translate(" + settings.padding[3] + "," + settings.padding[0] + ")")
 	
 radiusFunc = function(d) {
-		return d.r * 0.005;
-	}	
+	return sizeScale(d.numGenes);//d.r * 0.005;
+}	
 		
 svg.selectAll("circle")
 	.data(data)
@@ -194,8 +180,8 @@ $(function() {
 			displayZoomLabels(ui.value);
 			
 			svg.selectAll("text.zoomLabel")
-				.attr("x", function(d) {  return x(d.x) + radiusFunc(d);})		
-				.attr("y", function(d) {return y(d.y) + radiusFunc(d) ; })		
+				.attr("x", function(d) {  return x(d.x);})		
+				.attr("y", function(d) {return y(d.y); })		
 		}
 	});
 	$( "#amount" ).val( $( "#slider" ).slider( "value" ) );
@@ -295,8 +281,8 @@ function redraw() {
 //		lastScale = scale
 //	}
 	svg.selectAll("text.zoomLabel")
-		.attr("x", function(d) {  return x(d.x) + radiusFunc(d) ; })		
-		.attr("y", function(d) {return y(d.y) + radiusFunc(d) ; })		
+		.attr("x", function(d) {  return x(d.x); })		
+		.attr("y", function(d) {return y(d.y); })		
 	
 	
 	var allowedLabel = 80/zoomLevel
