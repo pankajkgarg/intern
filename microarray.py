@@ -53,9 +53,11 @@ class MicroArray:
 		ignoreCols = set(ignoreCols)
 		ignoreRows = set(ignoreRows)
 		
-		dialect = csv.Sniffer().sniff(fileObj.read(1024))
-		fileObj.seek(0)
-		reader = csv.reader(fileObj, dialect)
+		#dialect = csv.Sniffer().sniff(fileObj.read(1024))
+		#fileObj.seek(0)
+		
+		#Shall only work with comma separated file
+		reader = csv.reader(fileObj)
 		
 		genes = {}
 		for i,row in enumerate(reader):
@@ -76,7 +78,7 @@ class MicroArray:
 					continue
 				
 				if colNum == idCol:
-					tempId = cell
+					tempId = cell.strip().upper()
 				else:
 					if cell == '':
 						cell = '0'

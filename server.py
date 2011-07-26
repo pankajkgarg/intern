@@ -45,7 +45,7 @@ urls = (
 	'/deleteRow/(?P<id>[^/]+)', 'deleteRow',
 )
 
-web.config.debug = False
+web.config.debug = True
 app = web.application(urls, globals())
 
 curdir = os.path.dirname(__file__)
