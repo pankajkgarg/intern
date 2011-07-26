@@ -243,10 +243,7 @@ class GoTree:
 		self.modTerms = modTerms = self.pairFilter()
 		print 'No. of terms after filtering: ', len(modTerms)
 		
-		simMatrix = self.resnick(modTerms)
-		
-		#Converting into dissimilarity matrix
-		disMatrix = (simMatrix)
+		disMatrix = self.resnick(modTerms)
 		
 		#Doing mds
 		mdsInstance = mds.MDS(disMatrix)
@@ -465,17 +462,72 @@ class GoTree:
 					self.resnickDebug += 1
 					print 'REsnick debug', self.resnickDebug
 				else:
-					simMatrix[i][j] = simMatrix[j][i] = ( 2 * math.log(float(score)/self.totalGenes)) - math.log(len(self.associations[terms[i].id])/float(self.totalGenes)) - math.log(len(self.associations[terms[j].id])/float(self.totalGenes))
+					simMatrix[i][j] = simMatrix[j][i] = -1 * math.log(float(score)/self.totalGenes)
 		
 		tempList = []
 		map(tempList.extend, simMatrix)
 		maxValue = max(tempList)
 		for i in xrange(lenTerms):
-			simMatrix[i][i] = 0#(maxValue * 1.1)
+			simMatrix[i][i] = (maxValue * 1.1)
 		
-		#print simMatrix
+		disMatrix = sim2dis(simMatrix)
 				
-		return simMatrix
+		return disMatrix
+	
+	def jiang(self, terms):
+		'Terms - List of filtered go terms ( Instance of GoTerm )'
+		
+		#Ensure that the terms is a list, and not a set
+		#	This is necessary, so that later labels doesn't mix up
+		if not isinstance(terms, (list, tuple)):
+			raise Exception("given parameter is not a list")
+		
+		lenTerms = len(terms)
+		disMatrix = [[0 for _ in xrange(lenTerms)] for _ in xrange(lenTerms)]
+		
+		ancestors = []
+		for i in xrange(lenTerms):
+			tempSet = self.tree.ancestors(terms[i].id)
+			tempSet.remove(self.tree.ensure_term(terms[i].id))
+			ancestors.append(tempSet)
+			
+		for i in xrange(lenTerms):
+			for j in xrange(i):
+				common = ancestors[i].intersection(ancestors[j])
+				scores = []
+				for term in common:
+					scores.append( (term.id, len(self.associations[term.id])) ) 
+					#print 'Term: ', term.id, '\tScore:', len(self.associations[term.id])
+					
+					
+				if len(scores) != 0:
+					# minimum because, lesser the number of genes, 
+					# higher the Information Content
+					score = min(scores, key = operator.itemgetter(1)) 
+					if score[1] == 0:
+						print score
+					score = score[1]
+				else:
+					print 'No common ancestors'
+					score = 0
+				
+					
+				if score == 0:
+					#TODO: Analyze this situation, how come the minimum score is 0
+					disMatrix[i][j] = disMatrix[j][i] = 0
+					#print common
+					self.resnickDebug += 1
+					print 'REsnick debug', self.resnickDebug
+				else:
+					disMatrix[i][j] = disMatrix[j][i] = ( 2 * math.log(float(score)/self.totalGenes)) - math.log(len(self.associations[terms[i].id])/float(self.totalGenes)) - math.log(len(self.associations[terms[j].id])/float(self.totalGenes))
+		
+		tempList = []
+		map(tempList.extend, disMatrix)
+		maxValue = max(tempList)
+		for i in xrange(lenTerms):
+			disMatrix[i][i] = 0#(maxValue * 1.1)
+		
+		return disMatrix
 		
 	def subSelect(self, terms):
 		'''

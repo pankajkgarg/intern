@@ -124,6 +124,15 @@ svg.selectAll("text")
 		.attr("text-anchor", "middle")
 		//.text(function(d) { return String(d.label);});
 
+$("#displayNodeLabels").click(function(){
+	if ($("#displayNodeLabels").attr("checked")){
+		svg.selectAll("text.label")
+			.text(function(d) { return d.label ;})
+	}else {
+		svg.selectAll("text.label")
+			.text(function(d) { return "" ;})
+	}
+})
 
 
 maxLevel = 0
@@ -272,8 +281,10 @@ function redraw() {
 	}
 	
 	scale = Math.ceil(zoomScale(zoomLevel))
-	displayZoomLabels(scale)
-	//console.log("Transformed scale ", scale)
+	
+	if ($('#fixSummary').attr("checked") == false) {
+		if (scale <= maxLabelScore) displayZoomLabels(scale);
+	}
 	
 	
 //	if (scale != lastScale){
@@ -306,7 +317,7 @@ function redraw() {
 	svg.selectAll("text.label")
 		.attr("x", function(d) {  return x(d.x) + radiusFunc(d) ; })		//  + (x(d.z) * 0.001) + 2
 		.attr("y", function(d) {return y(d.y) - radiusFunc(d) - 5 ; })		//  + (0.5 * x(d.z) * 0.001)
-		.text(function(d) { return ((zoomLevel >= settings.displayZoom)? d.label : "") ;});  
+		//.text(function(d) { return ((zoomLevel >= settings.displayZoom)? d.label : "") ;});  
 	
 	if (settings.fontResize) { svg.selectAll("text.label").attr("font-size", function(d) { return s * 0.003; }); }
 	if (settings.circleResize) { svg.selectAll("circle").attr("r", function(d) { tempX =  s * d.score * 0.002;   return tempX;}) ; }
