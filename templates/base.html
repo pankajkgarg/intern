@@ -47,7 +47,7 @@
     	
 		<div id="menu"> 
 			<a href="/"> Home </a> &nbsp;&nbsp;&nbsp;&nbsp; 
-			<a href="/history"> All History </a>
+			<a href="history"> All History </a>
 		</div>
 		<div id="search">
 			Result Id: <input type="text" id="searchBox"> <button id="searchButton" value="Search">Search </button>
@@ -77,7 +77,7 @@
 			<tbody>
 			{% for row in history %}
 				<tr class='historyRow' id="{{row['id']}}" >
-					<th scope="row" class="{{ loop.cycle("spec", "specalt")}}"><a href='/view/{{row['id']}}'> {{ row['id'] }} </a> </th>
+					<th scope="row" class="{{ loop.cycle("spec", "specalt")}}"><a href='view/{{row['id']}}'> {{ row['id'] }} </a> </th>
 					<td>{{ row['name'] }}</td>
 					<td>{{ row['description'] }}</td>
 					<td><button id="button_{{row['id']}}" class='deleteButton' value="{{row['id']}}" >Delete</button></td>
