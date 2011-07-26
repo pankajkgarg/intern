@@ -1,10 +1,21 @@
+'''
+LICENSE:
+	Copyright (C) 2011, Pankaj Kumar Garg
+	This program is distributed under GNU General Public License
+'''
+
+__author__  = "Pankaj Kumar Garg"
+__email__   = "pankajn17@gmail.com"
+__copyright__ = "Copyright (c) 2011, Pankaj Kumar Garg"
+__license__ = "GPLv3"
+
 import math, csv, array, operator, json, os, random
 import gene_ontology as go
 import mds
 from utils import *
 from microarray import MicroArray
 from gzip import GzipFile
-from collections import defaultdict
+from collections import defaultdict, deque
 
 #if __name__ != "__main__":
 #	import sys
@@ -240,7 +251,7 @@ class GoTree:
 		
 		print 'No. of terms before filtering:', len(self.terms)
 		#Terms after filtering
-		self.modTerms = modTerms = self.pairFilter()
+		self.modTerms = modTerms = self.treeFilter()
 		print 'No. of terms after filtering: ', len(modTerms)
 		
 		disMatrix = self.resnick(modTerms)
@@ -403,7 +414,82 @@ class GoTree:
 					
 		modTerms = list(modTerms)		
 		return modTerms
+	
+	def treeFilter(self):
+		modTerms = set()
+
+		#Finding out the root nodes
+		rootNodes = self.giveRoot()
 		
+		#Finding out the direct descendants of root node
+		underRoot = self.giveUnderRoot()
+
+		#Finding the leaf nodes
+		leafNodes = set()
+		for goId, term in self.tree.terms.iteritems():
+			leafNodes.add(goId)
+		for goId, term in self.tree.terms.iteritems():
+			if 'is_a' not in term.tags:
+				if goId in leafNodes:
+					leafNodes.remove(goId)
+				continue
+			parents = term.tags['is_a']
+			for parent in parents:
+				parentId = parent.value
+				if parentId in leafNodes:
+					leafNodes.remove(parentId)
+		
+		queue = deque()
+		for goId in self.terms:
+			term = self.tree.lookup(goId)
+			if term.id in leafNodes:
+				queue.append(term.id)
+				
+		while queue:
+			goId = queue.popleft()
+			
+			if goId in rootNodes or goId in underRoot:
+				#Direct descendants are being neglected now, 
+				# but an exception is made for their children
+				# i.e. If their children doesn't pass the t-test
+				# then the direct descendant can be selected
+				continue
+			
+			term = self.tree.lookup(goId)
+			term = self.terms[term.id]
+			
+			parents = term.tags['is_a']
+				
+			for parent in parents:
+				parentId = parent.value
+				if parentId in self.terms:	
+
+					tValue = tTest(term.correlationList, self.terms[parentId].correlationList)
+					
+					if tValue < 0 and parentId not in underRoot:
+						# The mean of the parent is greater, so neglecting the term
+						queue.append(parentId)
+						continue
+					
+					modT = math.fabs(tValue)
+					
+					#Using one tailed pValue
+					pValue = pCalculator(modT, len(term.correlationList) + len(self.terms[parentId].correlationList) - 2)
+					
+					if math.isnan(pValue):
+						pValue = 0.001
+					
+					if pValue < self.significanceLevel and tValue > 0:
+						modTerms.add(term)
+					elif pValue > self.significanceLevel and tValue > 0:
+						queue.append(parentId)
+					elif parentId in underRoot and pValue  < self.significanceLevel and tValue < 0:
+						modTerms.add(self.terms[parentId])
+					
+					
+		modTerms = list(modTerms)		
+		return modTerms
+	
 	def greedyFilter(self):
 		termsList = []
 		for term in self.terms.itervalues():
@@ -470,7 +556,7 @@ class GoTree:
 		for i in xrange(lenTerms):
 			simMatrix[i][i] = (maxValue * 1.1)
 		
-		disMatrix = sim2dis(simMatrix)
+		disMatrix = self.sim2dis(simMatrix)
 				
 		return disMatrix
 	
@@ -615,6 +701,9 @@ class GoTree:
 			if len(finalSelection) >  1.4* len(lastLabelSet) and len(lastLabelSet) > 3 and lastI != i and binSize/(lastI - i) < 10:
 				i = i + ((lastI - i)/2.0)
 				continue
+			elif len(lastLabelSet) != 0 and lastLabelSet.intersection(finalSelection) == lastLabelSet:
+				labels.pop()
+				labels.append(finalSelection)
 			elif set(finalSelection) != lastLabelSet:
 				#if len(lastLabelSet) == len(finalSelection):
 				#	labels.pop()

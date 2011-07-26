@@ -1,11 +1,23 @@
 'Provides routines to fetch urls'
+'''
+LICENSE:
+	Copyright (C) 2011, Pankaj Kumar Garg
+	This program is distributed under GNU General Public License
+'''
+
+
+__author__  = "Pankaj Kumar Garg"
+__email__   = "pankajn17@gmail.com"
+__copyright__ = "Copyright (c) 2011, Pankaj Kumar Garg"
+__license__ = "GPLv3"
 
 import socket
 import random, subprocess, shlex, cStringIO, gzip
 import urllib, urllib2
+from pprint import pprint
 
 
-def fetch(url, postData = None, headers = {}, timeout = 120, debug = False):
+def fetch(url, postData = None, headers = {}, timeout = 120, debug = False, unarchive = False):
 	'''
 	Since, this module uses python library to fetch urls, there are few things to notice
 	Proxy setup is automatically done by the python
@@ -64,16 +76,18 @@ def fetch(url, postData = None, headers = {}, timeout = 120, debug = False):
 		
 		headerStr = "\n".join(key + ": " + value for key,value in data["headers"].iteritems())
 		
+		pprint(data['headers'])
 		#decoding
-		if "content-encoding" in data["headers"] and data["headers"]["content-encoding"] == "gzip":
-			try:
-				htmlStream = cStringIO.StringIO(urlList[i]['html'][:])
-				gzipper = gzip.GzipFile(fileobj = htmlStream, mode="rb")
-				urlList[i]['html'] = gzipper.read()
-				gzipper.close()
-				htmlStream.close()
+		if unarchive:
+			if "content-encoding" in data["headers"] and data["headers"]["content-encoding"] == "gzip":
+				try:
+					htmlStream = cStringIO.StringIO(urlList[i]['html'][:])
+					gzipper = gzip.GzipFile(fileobj = htmlStream, mode="rb")
+					urlList[i]['html'] = gzipper.read()
+					gzipper.close()
+					htmlStream.close()
 				
-			except:
-				urlList[i]['html'] = urlList[i]['html']
+				except:
+					urlList[i]['html'] = urlList[i]['html']
 		
 	return data

@@ -1,5 +1,16 @@
+'''
+LICENSE:
+	Copyright (C) 2011, Pankaj Kumar Garg
+	This program is distributed under GNU General Public License
+'''
+
+__author__  = "Pankaj Kumar Garg"
+__email__   = "pankajn17@gmail.com"
+__copyright__ = "Copyright (c) 2011, Pankaj Kumar Garg"
+__license__ = "GPLv3"
+
 #First implementation of mds
-#Non-metri mds using SMACOF algorithm
+#Non-metric mds using SMACOF algorithm
 
 import random, time, os, operator, array
 from pprint import pprint

@@ -1,6 +1,14 @@
 # -*- coding: utf-8 -*-
-#from pprint import pprint
-#pprint(globals())
+'''
+LICENSE:
+	Copyright (C) 2011, Pankaj Kumar Garg
+	This program is distributed under GNU General Public License
+'''
+
+__author__  = "Pankaj Kumar Garg"
+__email__   = "pankajn17@gmail.com"
+__copyright__ = "Copyright (c) 2011, Pankaj Kumar Garg"
+__license__ = "GPLv3"
 	
 import web
 from web import form
@@ -61,6 +69,59 @@ def dbSetup():
 	conn.commit()
 	cursor.close()
 
+file2Url = {}
+def annotationChoices():
+	'If convert is true, data shall be returned in pickled format'
+	global file2Url
+	url = 'http://www.geneontology.org/GO.downloads.annotations.shtml'
+	filePath = getFile('annotationList.html', url, cacheTime = 8*3600)
+	f = open(filePath)
+	text = f.read()
+	f.close()
+	
+	table = re.search(r'(?is)<table[^<]+?id\s*=\s*"annot".+?</table>', text)
+	if table is not None:
+		table = table.group()
+		annotations =  re.findall('(?is)<tr>.+?</tr>', table)
+		for annotation in annotations:
+			name = re.search(r'(?i)<span\s+class\s*=\s*[\'\"]spp[\'\"]\s*>(.+?)</span>', annotation)
+			if name is None:
+				continue
+			name = name.group(1)
+			name = re.sub(r'\s+', '_', name)
+			
+			link = re.search(r'(?i)<a\s+href\s*=\s*"(.+?)"\s*>\s*annotations\s*</a>', annotation)
+			if link is None:
+				continue
+			link = link.group(1)
+			
+			file2Url[name] = link
+			
+	return file2Url	
+	
+	
+def getFile(fileName, url, cacheTime = 7*24*3600):
+	'''Returns the path of filename on the disk, if the file 
+		doesn't exist, then it fetches them, and if the file is too
+		old, then it replace them with new one.
+	'''
+	filePath = os.path.join('data', fileName)
+	if os.path.isfile(filePath):
+		info = os.stat(filePath)
+		if (time.time() - info.st_mtime) < cacheTime:
+			return filePath
+	
+	print 'Fetching url: ', url
+	urlData = fetch(url)
+	if urlData['responseCode'] != 200:
+		raise Exception("Couldn't fetch url: ", url)
+	
+	f = open(filePath, 'wb')
+	f.write(urlData['html'])
+	f.close()
+	
+	return filePath
+	
 
 vemail = form.regexp(r"^$|.*@.*", "must be a valid email address")
 vnums = form.regexp(r"[0-9]*\s*,?\s*", 'must be a list of comma separatad numbers e.g "2,7,12" ')
@@ -69,9 +130,11 @@ vnum = form.regexp(r"[0-9]+", "must be a column number")
 
 vfile = form.regexp(r".+", "Required!")
 
+
 inputForm = form.Form(
-	form.File("annotationFile", vfile, description = 'Annotation File'),
+	#form.File("annotationFile", vfile, description = 'Annotation File'),
 	#form.File('ontologyFile', vfile, description = 'Ontology File'),
+	form.Dropdown("annotation", args = annotationChoices().keys(), description="Annotation"),
 	
 	form.File('microarrayFile', vfile, description = 'Microarray file (Only csv files)'),
 	form.Textbox("ignoreRows", vnums, description = "Rows in microarray to ignore"),
@@ -134,7 +197,7 @@ def process(kwargs):
 	
 	
 	#os.remove(kwargs['ontologyFile'])
-	os.remove(kwargs['annotationFile'])
+	#os.remove(kwargs['annotationFile'])
 	os.remove(kwargs['microarrayFile'])
 	
 	#Add to the database
@@ -171,7 +234,8 @@ class home:
 	def GET(self, cursor):
 		if web.ctx.env.get('HTTP_AUTHORIZATION') is None:
 			raise web.seeother('/login')
-
+		
+		annotationChoices()
 		f = inputForm()
 		
 		formText = f.render()
@@ -213,13 +277,19 @@ class home:
 			# f.write(dataDict["ontologyFile"])
 			# f.close()
 			
-			dataDict["ontologyFile"] = os.path.join("data", "gene_ontology.obo")
+			#dataDict["ontologyFile"] = os.path.join("data", "gene_ontology.obo")
 			
-			annotationPath = os.path.join("data", dataDict["jobId"] + "_annotations.txt" + annotationAdd)
-			f = open(annotationPath, "wb")
-			f.write(dataDict["annotationFile"])
-			f.close()
-			dataDict["annotationFile"] = annotationPath
+#			annotationPath = os.path.join("data", dataDict["jobId"] + "_annotations.txt" + annotationAdd)
+#			f = open(annotationPath, "wb")
+#			f.write(dataDict["annotationFile"])
+#			f.close()
+#			dataDict["annotationFile"] = annotationPath
+			
+			dataDict["ontologyFile"] = getFile("gene_ontology.obo", "http://www.geneontology.org/ontology/obo_format_1_2/gene_ontology.1_2.obo")
+			
+			if dataDict["annotation"] not in file2Url:
+				raise Exception("Annotation file name not in file2Url")
+			dataDict["annotationFile"] = getFile(dataDict["annotation"] + '.gz', file2Url[dataDict["annotation"]])
 			
 			microarrayPath = os.path.join("data", dataDict["jobId"] + "_microarray.csv")
 			f = open(microarrayPath, "wb")

@@ -1,5 +1,6 @@
 body{
-    background: url(http://3dciencia.com/blog/wp-content/uploads/2011/01/methylated-BDNF-DNA-epigenetics-epigenetica-ADN-metilado-atomic-structure.jpg);
+    %background: url(http://3dciencia.com/blog/wp-content/uploads/2011/01/methylated-BDNF-DNA-epigenetics-epigenetica-ADN-metilado-atomic-structure.jpg);
+    %background-color: teal;
     background-repeat: no-repeat;
     background-position: center;
     font-family: sans-serif;
@@ -91,6 +92,11 @@ svg {
     margin: auto;
     padding-top: 20px;
     padding-bottom: 20px;
+}
+
+#slider {
+	margin-top: 10px;
+	margin-bottom: 15px;
 }
 
 .visible {

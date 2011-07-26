@@ -1,3 +1,14 @@
+'''
+LICENSE:
+	Copyright (C) 2011, Pankaj Kumar Garg
+	This program is distributed under GNU General Public License
+'''
+
+__author__  = "Pankaj Kumar Garg"
+__email__   = "pankajn17@gmail.com"
+__copyright__ = "Copyright (c) 2011, Pankaj Kumar Garg"
+__license__ = "GPLv3"
+
 import math, csv, array, operator, json, os
 import mds
 

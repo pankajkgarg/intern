@@ -305,14 +305,8 @@ function redraw() {
 		//.attr("cx", function(d, i) { tempX = x(d.x); return ( (tempX > 1) ? tempX :  "-200"); })
 		//.attr("cy", function(d, i) { tempY = y(d.y); return ( (tempY < settings.height) ? tempY : "-200"); })
 		.attr("cx", function(d) { return x(d.x) ;  })
-		.attr("cy", function(d) { return y(d.y); })
+		.attr("cy", function(d) { return y(d.y); });
 		
-		;
-	
-	
-
-	
-	
 	
 	svg.selectAll("text.label")
 		.attr("x", function(d) {  return x(d.x) + radiusFunc(d) ; })		//  + (x(d.z) * 0.001) + 2
