@@ -12,6 +12,9 @@ __license__ = "GPLv3"
 #First implementation of mds
 #Non-metric mds using SMACOF algorithm
 
+import os
+os.chdir(os.path.dirname(__file__))
+
 import random, time, os, operator, array
 from pprint import pprint
 

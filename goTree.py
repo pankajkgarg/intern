@@ -9,6 +9,9 @@ __email__   = "pankajn17@gmail.com"
 __copyright__ = "Copyright (c) 2011, Pankaj Kumar Garg"
 __license__ = "GPLv3"
 
+import os
+os.chdir(os.path.abspath(os.path.dirname(__file__)))
+
 import math, csv, array, operator, json, os, random
 import gene_ontology as go
 import mds

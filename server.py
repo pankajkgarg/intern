@@ -9,7 +9,13 @@ __author__  = "Pankaj Kumar Garg"
 __email__   = "pankajn17@gmail.com"
 __copyright__ = "Copyright (c) 2011, Pankaj Kumar Garg"
 __license__ = "GPLv3"
-	
+
+import os,sys
+os.chdir(os.path.abspath(os.path.dirname(__file__)))
+curdir = os.path.dirname(__file__)
+if curdir not in sys.path:
+    sys.path.append(curdir)
+
 import web
 from web import form
 import goTree
@@ -24,6 +30,7 @@ env = Environment(loader=PackageLoader('__main__', 'templates'))
 
 allowed = (
     ('admin','biology'),
+    ('a','a'),
 )
 
 
@@ -38,9 +45,12 @@ urls = (
 	'/deleteRow/(?P<id>[^/]+)', 'deleteRow',
 )
 
-web.config.debug = True
+web.config.debug = False
 app = web.application(urls, globals())
- 
+
+curdir = os.path.dirname(__file__)
+session = web.session.Session(app, web.session.DiskStore(os.path.join(curdir, 'data', 'sessions')),)
+
 def dbConn():
 	conn = sqlite3.connect(os.path.join('results', 'results.db'))
 	conn.row_factory = sqlite3.Row
@@ -68,6 +78,8 @@ def dbSetup():
 	cursor.execute('create table if not exists results (id text, name text, description text, timestamp int)')
 	conn.commit()
 	cursor.close()
+
+dbSetup()
 
 file2Url = {}
 def annotationChoices():
@@ -134,7 +146,7 @@ vfile = form.regexp(r".+", "Required!")
 inputForm = form.Form(
 	#form.File("annotationFile", vfile, description = 'Annotation File'),
 	#form.File('ontologyFile', vfile, description = 'Ontology File'),
-	form.Dropdown("annotation", args = annotationChoices().keys(), description="Annotation"),
+	form.Dropdown("annotation", args = annotationChoices().keys(), description="Annotation", class_ ="chzn-select"),
 	
 	form.File('microarrayFile', vfile, description = 'Microarray file (Only csv files)'),
 	form.Textbox("ignoreRows", vnums, description = "Rows in microarray to ignore"),
@@ -144,7 +156,7 @@ inputForm = form.Form(
 	# form.Checkbox("treeTypes", value="biological_process", description="biological process", checked=True),
 	# form.Checkbox("treeTypes", description="molecular function", value="molecular_function"),
 	# form.Checkbox("treeTypes", description="cellular component", value="cellular_component"),
-	form.Dropdown("treeTypes", args=["biological_process", "molecular_function", "cellular_component"], value="biological_process", description="Tree type"),
+	form.Dropdown("treeTypes", args=["biological_process", "molecular_function", "cellular_component"], value="biological_process", description="Tree type", class_ ="chzn-select"),
 	
 	#form.Dropdown("evidenceCodes", args=["all", "exp"], value="all", description="Evidence Codes"),
 	form.Textbox("evidenceCodes", vchars, description= "Evidence codes to ignore"),
@@ -232,8 +244,8 @@ def giveHistory(cursor, limit = 0):
 class home:
 	@db
 	def GET(self, cursor):
-		if web.ctx.env.get('HTTP_AUTHORIZATION') is None:
-			raise web.seeother('/login')
+		#if web.ctx.env.get('HTTP_AUTHORIZATION') is None:
+		#	raise web.seeother('/login')
 		
 		annotationChoices()
 		f = inputForm()
@@ -307,8 +319,8 @@ class home:
 class view:
 	@db
 	def GET(self, jobId, cursor, withHistory = True):
-		if web.ctx.env.get('HTTP_AUTHORIZATION') is None:
-			raise web.seeother('/login')
+		#if web.ctx.env.get('HTTP_AUTHORIZATION') is None:
+		#	raise web.seeother('/login')
 		cursor.execute("select * from results where id = ?", (jobId, ))
 		info = dict(cursor.fetchone())
 		
@@ -379,8 +391,8 @@ class downloadView:
 class history:
 	@db
 	def GET(self, cursor):
-		if web.ctx.env.get('HTTP_AUTHORIZATION') is None:
-			raise web.seeother('/login')
+		#if web.ctx.env.get('HTTP_AUTHORIZATION') is None:
+		#	raise web.seeother('/login')
 		return env.get_template("base.html").render(history = giveHistory(cursor), allHistory = True)
 		
 class results:
@@ -420,7 +432,7 @@ class Login:
 			else:
 				authreq = True
 		if authreq:
-			web.header('WWW-Authenticate','Basic realm="Auth example"')
+			web.header('WWW-Authenticate','Basic realm="Please authorize yourself"')
 			web.ctx.status = '401 Unauthorized'
 			return		
 	
@@ -455,7 +467,8 @@ Your very own gocharts server ;)"
 	s = smtplib.SMTP("localhost")
 	s.sendmail(msg["From"], [msg["To"]], msg.as_string())
 	s.quit()	
-	
+
+application = app.wsgifunc()	
 	
 if __name__ == "__main__":
 
@@ -482,5 +495,5 @@ if __name__ == "__main__":
 	#signal.pause()
 	#print "setup of Ctrl + C complete"
 	
-	dbSetup()
+	
 	app.run()
